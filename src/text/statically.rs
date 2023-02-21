@@ -6,7 +6,8 @@ use super::position::Position;
 pub struct StaticInput<'a> {
     str: &'a str,
     pos: Position,
-    errors: Vec<()>
+    offset: usize,
+    msgs: Vec<String>
  }
  
  impl<'a> StaticInput<'a> {
@@ -14,16 +15,13 @@ pub struct StaticInput<'a> {
         Self {
             str,
             pos: Position::start(),
-            errors: Vec::new()
+            offset: 0,
+            msgs: Vec::new()
         }
      }
 
-     pub fn line(&self) -> usize {
-        self.pos.line
-     }
-
-     pub fn column(&self) -> usize {
-        self.pos.column
+     pub fn pos(&self) -> Position {
+        self.pos
      }
  }
 
@@ -32,61 +30,43 @@ pub struct StaticInput<'a> {
      type Item = char;
  
      fn next(&mut self) -> Option<Self::Item> {
-        let ch = self.str[self.pos.offset..].chars().next()?;
+        let ch = self.str[self.offset..].chars().next()?;
+        self.offset += char::len_utf8(ch);
 
-        self.pos.offset += char::len_utf8(ch);
-
-        if ch == '\n' {
-            self.pos.line += 1;
-            self.pos.column = 1;
-        }else {
-            self.pos.column += 1;
-        }
+        self.pos.forward(ch);
 
         Some(ch)
      }
  }
  
+ type Offset = usize;
 
  impl<'a> Input for StaticInput<'a> {
  
-    type Pos = Position;
-    type Err = ();
-    type Errs = Vec<()>;
+    type Pos = (Offset, Position);
+    type Msg = String;
 
     fn cursor(&mut self) -> CursorGuard<Self> {
-        CursorGuard::new(self, self.pos)
+        CursorGuard::new(self, (self.offset, self.pos))
     }
      
     fn restore_callback(&mut self, cursor: Cursor<Self::Pos>) {
-        self.pos = cursor.pos();
+        (self.offset, self.pos) = cursor.pos();
     }
     
     fn commit_callback(&mut self, _cursor: Cursor<Self::Pos>) {}
 
-    fn report_err(&mut self, err: Self::Err) {
-        self.errors.push(err)
+    fn report(&mut self, msg: Self::Msg) {
+        self.msgs.push(msg)
     }
 
-    fn finish(self) -> Result<(), Self::Errs> {
-        if self.errors.is_empty() {
-            Ok(())
-        }else {
-            Err(self.errors)
-        }
+    fn finish(self) -> Vec<Self::Msg> {
+        self.msgs
     }
  }
 
 
  #[test]
 pub fn test() {
-    let mut input = StaticInput::new("as\r\nd");
-    let mut cursor = input.cursor();
 
-    println!("ch {:?}, ln {},col {}", input.next(), input.line(), input.column());
-    println!("ch {:?}, ln {},col {}", input.next(), input.line(), input.column());
-    println!("ch {:?}, ln {},col {}", input.next(), input.line(), input.column());
-    println!("ch {:?}, ln {},col {}", input.next(), input.line(), input.column());
-    cursor.restore();
-    println!("ch {:?}, ln {},col {}", input.next(), input.line(), input.column());
 }

@@ -57,7 +57,6 @@ impl<I: Input> Drop for CursorGuard<I> {
             unsafe {
                 self.input.as_mut().commit_callback(self.cursor)
             }
-            self.is_restore = false
         }
     }
 }

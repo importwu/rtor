@@ -45,8 +45,8 @@ pub trait Parser<I> {
         Or { aparser: self, bparser: parser }
     }
 
-    fn expect<Msg>(self, msg: Msg) -> Expect<Self, Msg> where Self: Sized {
-        Expect { parser: self, msg: msg }
+    fn expect(self, msg: I::Msg) -> Expect<Self, I::Msg> where Self: Sized, I: Input {
+        Expect { parser: self, msg }
     }
 }
 
@@ -63,8 +63,7 @@ impl<I, F, T, E> Parser<I> for F where F: FnMut(&mut I) -> Result<T, E> {
 pub trait Input: Iterator {
 
     type Pos: Copy;
-    type Err;
-    type Errs: IntoIterator<Item = Self::Err>;
+    type Msg;
 
     fn cursor(&mut self) -> CursorGuard<Self> where Self: Sized;
     
@@ -72,8 +71,8 @@ pub trait Input: Iterator {
     
     fn commit_callback(&mut self, cursor: Cursor<Self::Pos>);
 
-    fn report_err(&mut self, err: Self::Err);
+    fn report(&mut self, msg: Self::Msg);
 
-    fn finish(self) -> Result<(), Self::Errs>;
+    fn finish(self) -> Vec<Self::Msg>;
 }
 

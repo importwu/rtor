@@ -207,7 +207,7 @@ pub fn sepby<I, P, D>(mut parser: P, mut delim: D) -> impl Parser<I, Output = Ve
             {
                 let mut cursor = input.cursor();
                 match parser.parse(input) {
-                    Ok(v) => { result.push(v) },
+                    Ok(v) => {result.push(v) },
                     Err(_) => { cursor.restore(); break }
                 }
             }

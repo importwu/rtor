@@ -2,26 +2,17 @@ use std::collections::HashMap;
 use std::fs;
 
 use rtor::{Input, Parser, alt, seq};
-use rtor::text::{string, sat, ParseResult, digit, char, eof, token, hex, StreamInput, oneof, StaticInput};
+use rtor::text::{string, sat, ParseResult, digit, char, eof, token, hex, StreamInput, oneof};
 use rtor::combinators::{ between, many, many1, sepby, pair, attempt, opt_or_default};
 
-use std::time::SystemTime;
 
 fn main() {
 
     let mut input = StreamInput::new(fs::File::open("./examples/json_example.json").unwrap());
 
-    let start_time = SystemTime::now();
-
     let res = parse_json(&mut input);
 
-    let end_time = SystemTime::now();
-
-    let elapsed_time = end_time.duration_since(start_time).unwrap();
-
     println!("{:?}", res);
-
-    println!("\n\n----------elapsed: {:?}-------------\n\n", elapsed_time);
 
 }
 
@@ -29,11 +20,11 @@ fn parse_json<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue>  {
     alt!(
         json_array,
         json_object,
-        json_string,
         json_number,
         json_true,
         json_false,
-        json_null
+        json_null,
+        json_string
     ).parse(input)
 }
 
@@ -86,7 +77,7 @@ fn json_false<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> {
 }
 
 fn json_string<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> { 
-    token(attempt(kstring))
+    token(kstring)
         .map(JsonValue::String)
         .parse(input)
 }
@@ -104,8 +95,8 @@ fn kstring<I: Input<Item = char>>(input: &mut I) -> ParseResult<String> {
 
 fn character<I: Input<Item = char>>(input: &mut I) -> ParseResult<String> {
     alt!(
-        attempt(sat(|x| x != '"').map(String::from)),
-        seq!(char('\\'), escape).map(|(slash, escape)| format!("{}{}", slash, escape))
+        seq!(attempt(char('\\')), escape).map(|(slash, escape)| format!("{}{}", slash, escape)),
+        sat(|x| x != '"').map(String::from)
     ).parse(input)
 }
 

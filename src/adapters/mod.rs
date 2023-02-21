@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::{Parser, Input};
 
 pub struct Map<P, F> {
@@ -106,10 +108,10 @@ pub struct Expect<P, Msg> {
     pub(crate) msg: Msg
 }
 
-impl<I, P> Parser<I> for Expect<P, I::Err> 
+impl<I, P> Parser<I> for Expect<P, I::Msg> 
     where P: Parser<I>,
     I: Input,
-    <I as Input>::Err: Clone    
+    <I as Input>::Msg: Clone
 {
     type Error = P::Error;
     type Output = Option<P::Output>;
@@ -118,7 +120,7 @@ impl<I, P> Parser<I> for Expect<P, I::Err>
         match self.parser.parse(input) {
             Ok(v) => Ok(Some(v)),
             Err(_) => {
-                input.report_err(self.msg.clone());
+                input.report(self.msg.clone());
                 Ok(None)
             }
         }

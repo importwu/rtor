@@ -75,15 +75,11 @@ impl<T: Copy> Buffer<T> {
     }
 
     fn push_back(&mut self, value: T) {
-
         if self.is_full() { self.grow() }
 
         self.buf_write(self.tail, value);
-
         let tail = self.tail + 1;
-
         self.tail = tail % self.cap;
-
         self.len += 1;
     }
 
@@ -160,17 +156,25 @@ pub struct StreamInput<R: Read> {
     decoder: DecodeUtf8Lossy<R>,
     buf: Buffer<char>,
     pos: Position,
-    cursor_count: usize
+    offset: usize,
+    cursor_count: usize,
+    msgs: Vec<String>
 }
 
 impl<R: Read> StreamInput<R> {
     pub fn new(reader: R) -> Self {
         Self {
             decoder: DecodeUtf8Lossy::new(reader),
-            buf: Buffer::with_capacity(45),
+            buf: Buffer::with_capacity(64),
             pos: Position::start(),
-            cursor_count: 0
+            offset: 0,
+            cursor_count: 0,
+            msgs: Vec::new()
         }
+    }
+
+    pub fn pos(&self) -> Position {
+        self.pos
     }
 }
 
@@ -178,61 +182,67 @@ impl<R: Read> Iterator for StreamInput<R> {
     type Item = char;
 
     fn next(&mut self) -> Option<Self::Item> {
-        
-        if self.cursor_count == 0 {
-            return match self.buf.pop_front() {
-                Some(ch) => Some(ch),
-                None => self.decoder.next()
+
+        let ch = {
+            if self.cursor_count == 0 {
+                match self.buf.pop_front() {
+                    Some(ch) => ch,
+                    None => self.decoder.next()?
+                }
+            }else {
+                if self.offset == self.buf.len() {
+                    let ch = self.decoder.next()?;
+                    self.buf.push_back(ch);
+                    self.offset += 1;
+                    ch
+                }else {
+                    let ch = self.buf[self.offset];
+                    self.offset += 1;
+                    ch
+                }
             }
-        }
+        };
 
-        if self.pos.offset == self.buf.len() {
-            let ch = self.decoder.next()?;
-            self.buf.push_back(ch);
-            self.pos.offset += 1;
-            return Some(ch)
-        }
+        self.pos.forward(ch);
 
-        let ch = self.buf[self.pos.offset];
-        self.pos.offset += 1;
         Some(ch)
     }
 }
 
+type Offset = usize;
 
 impl<R: Read> Input for StreamInput<R> {
-    type Pos = Position;
-    type Err = ();
-    type Errs = Vec<()>;
+    type Pos = (Offset, Position);
+    type Msg = String;
 
     fn cursor(&mut self) -> CursorGuard<Self> where Self: Sized {
         self.cursor_count += 1;
-        CursorGuard::new(self, self.pos)
+        CursorGuard::new(self, (self.offset, self.pos))
     }
 
     fn restore_callback(&mut self, cursor: Cursor<Self::Pos>) {
-        self.pos = cursor.pos();
+        (self.offset, self.pos) = cursor.pos();
         self.cursor_count -= 1;
         if self.cursor_count == 0 {
-            self.buf.truncate_front(cursor.offset);
-            self.pos.offset = 0;
+            self.buf.truncate_front(self.offset);
+            self.offset = 0;
         }
     }
 
     fn commit_callback(&mut self, _cursor: Cursor<Self::Pos>) {
         self.cursor_count -= 1;
         if self.cursor_count == 0 {
-            self.buf.truncate_front(self.pos.offset);
-            self.pos.offset = 0;
+            self.buf.truncate_front(self.offset);
+            self.offset = 0;
         }
     }
 
-    fn report_err(&mut self, _err: Self::Err) {
-        
+    fn report(&mut self, msg: Self::Msg) {
+        self.msgs.push(msg)
     }
 
-    fn finish(self) -> Result<(), Self::Errs> {
-        todo!()
+    fn finish(self) -> Vec<Self::Msg> {
+        self.msgs
     }
 }
 
