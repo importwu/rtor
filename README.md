@@ -3,7 +3,7 @@ Parser Combinator Library
 
 # Example
 
-``
+```
 use rtor::text::{StaticInput, digit, char};
 use rtor::combinators::{sepby, between};
 
@@ -18,4 +18,4 @@ fn main() {
     
     assert_eq!(parser.parse(&mut input), Ok(vec![1,2,3,4,5,6]));
 }
-``
+```
