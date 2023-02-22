@@ -3,7 +3,7 @@ Parser Combinator Library
 
 # Example
 
-```
+```rust
 use rtor::text::{StaticInput, digit, char};
 use rtor::combinators::{sepby, between};
 
