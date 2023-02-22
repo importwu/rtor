@@ -10,7 +10,7 @@ use rtor::combinators::{sepby, between};
 fn main() {
     let mut input = StaticInput::new("[1,2,3,4,5,6]");
     
-    let parser = between(
+    let mut parser = between(
       char('['), 
       sepby(digit, char(',')), 
       char(']')
