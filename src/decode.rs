@@ -166,13 +166,12 @@ impl<R: Read> Iterator for DecodeUtf8Lossy<R> {
 
 #[test]
 fn test() {
-    // let a = b"Hello \xF0\x90\x80World";
-    // let stream = decode_utf8(&a[..]);
+    let a = b"Hello \xF0\x90\x80World";
+    let stream = DecodeUtf8::new(&a[..]);
     
-    // for c in stream {
-    //     println!("{:?}", c)
-    // }
-
+    for c in stream {
+        println!("{:?}", c)
+    }
 
     
 }

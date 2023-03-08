@@ -16,14 +16,14 @@ impl<T: Copy> Drop for Buffer<T> {
     }
 }
 
-// impl<T: Copy + std::fmt::Debug> std::fmt::Debug for Buffer<T> {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<T: Copy + std::fmt::Debug> std::fmt::Debug for Buffer<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 
-//         let xs = unsafe { std::slice::from_raw_parts(self.ptr.as_ptr(), self.cap) };
-//         f.write_fmt(format_args!("{:?}\n", xs)).unwrap();
-//         f.write_fmt(format_args!("cap = {}\nlen = {}\nhead = {}\ntail = {}\n", self.cap, self.len, self.head, self.tail))
-//     }
-// }
+        let xs = unsafe { std::slice::from_raw_parts(self.ptr.as_ptr(), self.cap) };
+        f.write_fmt(format_args!("{:?}\n", xs)).unwrap();
+        f.write_fmt(format_args!("cap = {}\nlen = {}\nhead = {}\ntail = {}\n", self.cap, self.len, self.head, self.tail))
+    }
+}
 
 impl<T: Copy> ops::Index<usize> for Buffer<T> {
     type Output = T;
@@ -154,7 +154,7 @@ impl<T: Copy> Buffer<T> {
 
 pub struct StreamInput<R: Read> {
     decoder: DecodeUtf8Lossy<R>,
-    buf: Buffer<char>,
+    pub buf: Buffer<char>,
     pos: Position,
     offset: usize,
     cursor_count: usize,
@@ -165,7 +165,7 @@ impl<R: Read> StreamInput<R> {
     pub fn new(reader: R) -> Self {
         Self {
             decoder: DecodeUtf8Lossy::new(reader),
-            buf: Buffer::with_capacity(64),
+            buf: Buffer::with_capacity(5),
             pos: Position::start(),
             offset: 0,
             cursor_count: 0,
@@ -247,8 +247,15 @@ impl<R: Read> Input for StreamInput<R> {
 }
 
 
+use crate::combinators::{between, sepby};
+use crate::text::{char, digit};
+use crate::Parser;
 #[test]
 fn test() {
+    let mut input = StreamInput::new("asd".as_bytes());
 
+    let mut c = input.cursor();
+
+    drop(input);
 
 }

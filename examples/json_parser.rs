@@ -10,14 +10,20 @@ fn main() {
 
     let mut input = StreamInput::new(fs::File::open("./examples/json_example.json").unwrap());
 
-    let res = parse_json(&mut input);
+    let mut input = StreamInput::new(std::io::stdin());
 
-    println!("{:?}", res);
+    
+    
+    loop {
+        let res = parse_json(&mut input);
+        println!("{:?}", res);
+        println!("{:?}", input.buf);
+    }
 
 }
 
 fn parse_json<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue>  {
-    alt!(
+    token(alt!(
         json_array,
         json_object,
         json_number,
@@ -25,7 +31,7 @@ fn parse_json<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue>  {
         json_false,
         json_null,
         json_string
-    ).parse(input)
+    )).parse(input)
 }
 
 
@@ -33,7 +39,7 @@ fn json_array<I>(input: &mut I) -> ParseResult<JsonValue>
     where I: Input<Item = char>
 {
     between(
-        token(attempt(char('['))), 
+        attempt(char('[')),
         sepby(parse_json, token(char(','))), 
         token(char(']'))
     )
@@ -45,7 +51,7 @@ fn json_object<I>(input: &mut I) -> ParseResult<JsonValue>
     where I: Input<Item = char>
 {
     between(
-        token(attempt(char('{'))), 
+        attempt(char('{')), 
         sepby(
             pair(token(kstring), token(char(':')),  parse_json), 
             token(char(','))
@@ -57,27 +63,27 @@ fn json_object<I>(input: &mut I) -> ParseResult<JsonValue>
 }
 
 fn json_null<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> {
-    token(attempt(string("null")))
+    attempt(string("null"))
         .map(|_| JsonValue::Null)
         .parse(input)
 }
 
 fn json_true<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> {
-    token(attempt(string("true")))
+    attempt(string("true"))
         .map(|_| JsonValue::Boolean(true))
         .parse(input)
 
 }
 
 fn json_false<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> {
-    token(attempt(string("false")))
+    attempt(string("false"))
         .map(|_|JsonValue::Boolean(false))
         .parse(input)
        
 }
 
 fn json_string<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> { 
-    token(kstring)
+    kstring
         .map(JsonValue::String)
         .parse(input)
 }
@@ -113,11 +119,11 @@ fn escape<I: Input<Item = char>>(input: &mut I) -> ParseResult<String> {
 }
 
 fn json_number<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> { 
-    token(attempt(seq!(
+    attempt(seq!(
         integer,
         opt_or_default(fraction),
         opt_or_default(exponent)
-    )))
+    ))
     .map(|(integer, fraction, exponent)| {
         let number = format!("{}{}{}", integer, fraction, exponent).parse::<f32>().unwrap();
         JsonValue::Number(number)
@@ -203,7 +209,7 @@ fn format_json(value: &JsonValue, sp: usize) -> String {
             res.push_str(&format!("{}{}", space, '['));
             res.push('\n');
             for value in values {
-                res.push_str(&format!("{}",format_json(value, sp + 2)));
+                res.push_str(&format!("{}", format_json(value, sp + 2)));
                 res.push(',');
                 res.push('\n');
             }

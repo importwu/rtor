@@ -25,7 +25,7 @@ pub trait Parser<I> {
 
     fn and_then<F, R>(self, f: F) -> AndThen<Self, F> 
         where Self: Sized,
-        F: FnMut(Self::Output) -> R,
+        F: FnOnce(Self::Output) -> R,
         R: Parser<I, Error = Self::Error>
     {
         AndThen { parser: self, f }
@@ -59,6 +59,16 @@ impl<I, F, T, E> Parser<I> for F where F: FnMut(&mut I) -> Result<T, E> {
         (self)(input)
     }
 } 
+
+impl<I, T, E> Parser<I> for Box<dyn Parser<I, Output = T, Error = E>> {
+    type Output = T;
+    type Error = E;
+
+    fn parse(&mut self, input: &mut I) -> Result<Self::Output, Self::Error> {
+        (**self).parse(input)
+    }
+}
+
 
 pub trait Input: Iterator {
 

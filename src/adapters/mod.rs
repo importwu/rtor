@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use crate::{Parser, Input};
 
 pub struct Map<P, F> {
@@ -50,14 +48,14 @@ pub struct AndThen<P, F> {
 impl<I, P, F, R> Parser<I> for AndThen<P, F> 
     where P: Parser<I>, 
         R: Parser<I, Error = P::Error>, 
-        F: FnMut(P::Output) -> R 
+        F: FnOnce(P::Output) -> R + Clone
 {
     type Error = P::Error;
     type Output = R::Output;
 
     fn parse(&mut self, input: &mut I) -> Result<Self::Output, Self::Error> {
         match self.parser.parse(input) {
-            Ok(v) => (self.f)(v).parse(input),
+            Ok(v) => (self.f.clone())(v).parse(input),
             Err(e) => Err(e)
         }
     }
@@ -110,8 +108,8 @@ pub struct Expect<P, Msg> {
 
 impl<I, P> Parser<I> for Expect<P, I::Msg> 
     where P: Parser<I>,
-    I: Input,
-    <I as Input>::Msg: Clone
+        I: Input,
+        I::Msg: Clone
 {
     type Error = P::Error;
     type Output = Option<P::Output>;

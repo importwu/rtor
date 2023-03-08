@@ -203,22 +203,27 @@ pub fn sepby<I, P, D>(mut parser: P, mut delim: D) -> impl Parser<I, Output = Ve
     move |input: &mut I| {
         let mut result = vec![];
 
-        loop {
-            {
-                let mut cursor = input.cursor();
-                match parser.parse(input) {
-                    Ok(v) => {result.push(v) },
-                    Err(_) => { cursor.restore(); break }
-                }
-            }
-
+        {
             let mut cursor = input.cursor();
-            if let Err(_) = delim.parse(input) {
-                cursor.restore();
-                break
+            match parser.parse(input) {
+                Ok(v) => { result.push(v) },
+                Err(_) => { cursor.restore(); return Ok(result) }
             }
         }
-        
+
+        loop {
+            
+            {
+                let mut cursor = input.cursor();
+                if let Err(_) = delim.parse(input) {
+                    cursor.restore();
+                    break
+                }
+            }
+            
+            result.push(parser.parse(input)?);
+        }
+
         Ok(result)
     }
 }
@@ -243,11 +248,7 @@ pub fn sepby1<I, P, D>(mut parser: P, mut delim: D) -> impl Parser<I, Output = V
                 }
             }
             
-            let mut cursor = input.cursor();
-            match parser.parse(input) {
-                Ok(v) => {result.push(v)},
-                Err(_) => { cursor.restore(); break }
-            }
+            result.push(parser.parse(input)?);
         }
         
         Ok(result)
