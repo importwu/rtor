@@ -1,4 +1,4 @@
-use std::ops::{RangeBounds, Bound};
+use std::ops::{RangeBounds, Bound, DerefMut};
 
 use super::traits::{Parser, Input};
 
@@ -8,13 +8,13 @@ pub fn attempt<I, P>(mut parser: P)  -> impl Parser<I, Output = P::Output, Error
         P: Parser<I>
 {
     move |input: &mut I| {
-        let mut c = input.cursor();
-        match parser.parse(input) {
+        let mut cursor = input.cursor();
+        match parser.parse(&mut cursor) {
             Ok(t) => {
                 Ok(t)
             },
             Err(e) => {
-                c.restore();
+                cursor.rollback();
                 Err(e)
             }
         }
@@ -152,12 +152,12 @@ pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Er
 {
     move |input: &mut I| {
         let mut cursor = input.cursor();
-        match parser.parse(input) {
+        match parser.parse(&mut cursor) {
             Ok(v) => {
                 Ok(Some(v))
             },
             Err(_) => {
-                cursor.restore();
+                cursor.rollback();
                 Ok(None)
             }
         }
@@ -171,12 +171,12 @@ pub fn opt_or_default<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output,
 {
     move |input: &mut I| {
         let mut cursor = input.cursor();
-        match parser.parse(input) {
+        match parser.parse(&mut cursor) {
             Ok(v) => {
                 Ok(v)
             },
             Err(_) => {
-                cursor.restore();
+                cursor.rollback();
                 Ok(Default::default())
             }
         }
@@ -205,9 +205,9 @@ pub fn sepby<I, P, D>(mut parser: P, mut delim: D) -> impl Parser<I, Output = Ve
 
         {
             let mut cursor = input.cursor();
-            match parser.parse(input) {
+            match parser.parse(&mut cursor) {
                 Ok(v) => { result.push(v) },
-                Err(_) => { cursor.restore(); return Ok(result) }
+                Err(_) => { cursor.rollback(); return Ok(result) }
             }
         }
 
@@ -215,8 +215,8 @@ pub fn sepby<I, P, D>(mut parser: P, mut delim: D) -> impl Parser<I, Output = Ve
             
             {
                 let mut cursor = input.cursor();
-                if let Err(_) = delim.parse(input) {
-                    cursor.restore();
+                if let Err(_) = delim.parse(&mut cursor) {
+                    cursor.rollback();
                     break
                 }
             }
@@ -242,8 +242,8 @@ pub fn sepby1<I, P, D>(mut parser: P, mut delim: D) -> impl Parser<I, Output = V
             
             {
                 let mut cursor = input.cursor();
-                if let Err(_) = delim.parse(input) {
-                    cursor.restore();
+                if let Err(_) = delim.parse(&mut cursor) {
+                    cursor.rollback();
                     break
                 }
             }
@@ -265,9 +265,9 @@ pub fn many<I, P>(mut parser: P) -> impl Parser<I, Output = Vec<P::Output>, Erro
 
         loop {
             let mut cursor = input.cursor();
-            match parser.parse(input) {
+            match parser.parse(&mut cursor) {
                 Ok(v) => result.push(v),
-                Err(_) => { cursor.restore(); break }
+                Err(_) => { cursor.rollback(); break }
             }
         }
 
@@ -287,9 +287,9 @@ pub fn many1<I, P>(mut parser: P) -> impl Parser<I, Output = Vec<P::Output>, Err
 
         loop {
             let mut cursor = input.cursor();
-            match parser.parse(input) {
+            match parser.parse(&mut cursor) {
                 Ok(v) => result.push(v),
-                Err(_) => { cursor.restore(); break }
+                Err(_) => { cursor.rollback(); break }
             }
         }
 
@@ -329,17 +329,17 @@ pub fn range<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = Vec<P:
         if let Some(max) = max {
             for _ in min..max {
                 let mut cursor = input.cursor();
-                match parser.parse(input) {
+                match parser.parse(&mut cursor) {
                     Ok(v) => result.push(v),
-                    Err(_) => { cursor.restore(); break }
+                    Err(_) => { cursor.rollback(); break }
                 }
             }
         }else {
             loop {
                 let mut cursor = input.cursor();
-                match parser.parse(input) {
+                match parser.parse(&mut cursor) {
                     Ok(v) => result.push(v),
-                    Err(_) => { cursor.restore(); break }
+                    Err(_) => { cursor.rollback(); break }
                 }
             }
         }
@@ -355,9 +355,9 @@ pub fn ignore<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Err
     move |input: &mut I| {
         loop {
             let mut cursor = input.cursor();
-            match parser.parse(input) {
+            match parser.parse(&mut cursor) {
                 Ok(_) => {},
-                Err(_) => { cursor.restore(); break }
+                Err(_) => { cursor.rollback(); break }
             }
         }
 
@@ -371,8 +371,8 @@ pub fn peek<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = P
 {
     move|input: &mut I| {
         let mut cursor = input.cursor();
-        let res = parser.parse(input);
-        cursor.restore();
+        let res = parser.parse(&mut cursor);
+        cursor.rollback();
         res
     }
 }

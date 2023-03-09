@@ -1,62 +1,52 @@
-use std::ops;
-use std::ptr::NonNull;
+use std::mem::forget;
+use std::ops::{Deref, DerefMut};
 
-use crate::traits::Input;
-
-#[derive(Debug)]
-pub struct CursorGuard<I: Input> {
-    input: NonNull<I>,
-    cursor: Cursor<I::Pos>,
-    is_restore: bool
-}
+use crate::Input;
 
 #[derive(Debug, Clone, Copy)]
-pub struct Cursor<P>(P);
-
-impl<P: Copy> Cursor<P> {
-    #[inline]
-    pub fn pos(&self) -> P {
-        self.0
-    } 
+pub enum CursorState<Pos> {
+    Rollback(Pos),
+    Commit
 }
 
-impl<P> ops::Deref for Cursor<P> {
-    type Target = P;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+pub struct CursorGuard<'a, I: Input> {
+    input: &'a mut I,
+    pos: I::Pos
 }
 
-impl<P> ops::DerefMut for Cursor<P> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<I: Input> CursorGuard<I> {
-
-    pub fn new(state: &I, pos: I::Pos) -> Self {
+impl<'a, I: Input> CursorGuard<'a, I> {
+    fn new(input: &'a mut I) -> Self {
         Self {
-            input: NonNull::new(state as *const _ as *mut _).unwrap(),
-            cursor: Cursor(pos),
-            is_restore: false
+            pos: input.pos(),
+            input
         }
     }
 
-    pub fn restore(&mut self) {
-        unsafe {
-            self.input.as_mut().restore_callback(self.cursor)
-        }
-        self.is_restore = true
+    #[inline]
+    pub fn rollback(self) {
+        self.input.update(CursorState::Rollback(self.pos));
+        forget(self);
+    }
+
+}
+
+impl<'a, I: Input> Drop for CursorGuard<'a, I> {
+    #[inline]
+    fn drop(&mut self) {
+        self.input.update(CursorState::Commit)
     }
 }
 
-impl<I: Input> Drop for CursorGuard<I> {
-    fn drop(&mut self) {
-        if !self.is_restore {
-            unsafe {
-                self.input.as_mut().commit_callback(self.cursor)
-            }
-        }
+impl<'a, I: Input> Deref for CursorGuard<'a, I> {
+    type Target = I;
+
+    fn deref(&self) -> &Self::Target {
+        self.input
+    }
+}
+
+impl<'a, I: Input> DerefMut for CursorGuard<'a, I> { 
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.input
     }
 }

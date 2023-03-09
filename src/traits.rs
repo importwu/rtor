@@ -1,7 +1,5 @@
-use crate::cursor::{CursorGuard, Cursor};
-use crate::adapters::{Map, AndThen, MapErr, And, Or, Expect};
-
-
+use crate::cursor::{CursorGuard, CursorState};
+use crate::adapters::{Map, AndThen, MapErr, And, Or};
 
 pub trait Parser<I> {
     type Output;
@@ -45,9 +43,9 @@ pub trait Parser<I> {
         Or { aparser: self, bparser: parser }
     }
 
-    fn expect(self, msg: I::Msg) -> Expect<Self, I::Msg> where Self: Sized, I: Input {
-        Expect { parser: self, msg }
-    }
+    // fn expect(self, msg: I::Msg) -> Expect<Self, I::Msg> where Self: Sized, I: Input {
+    //     Expect { parser: self, msg }
+    // }
 }
 
 
@@ -70,19 +68,36 @@ impl<I, T, E> Parser<I> for Box<dyn Parser<I, Output = T, Error = E>> {
 }
 
 
-pub trait Input: Iterator {
+pub trait Input {
 
+    type Item;
     type Pos: Copy;
-    type Msg;
 
     fn cursor(&mut self) -> CursorGuard<Self> where Self: Sized;
-    
-    fn restore_callback(&mut self, cursor: Cursor<Self::Pos>);
-    
-    fn commit_callback(&mut self, cursor: Cursor<Self::Pos>);
 
-    fn report(&mut self, msg: Self::Msg);
+    #[doc(hidden)]
+    fn update(&mut self, cursor: CursorState<Self::Pos>) where Self: Sized;
 
-    fn finish(self) -> Vec<Self::Msg>;
+    fn pos(&self) -> Self::Pos;
+
+    fn next(&mut self) -> Option<Self::Item>;
+
+    fn consume_while<F>(&mut self, mut pred: F) 
+        where F: FnMut(&Self::Item) -> bool,
+            Self: Sized
+    {
+        loop {
+            let mut cursor = self.cursor();
+            match cursor.next() {
+                Some(t) => {
+                    if !pred(&t) {
+                        continue;
+                    }
+                    cursor.rollback();
+                    return;
+                }
+                None => return
+            }
+        }
+    }
 }
-

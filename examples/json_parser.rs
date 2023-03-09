@@ -2,23 +2,23 @@ use std::collections::HashMap;
 use std::fs;
 
 use rtor::{Input, Parser, alt, seq};
-use rtor::text::{string, sat, ParseResult, digit, char, eof, token, hex, StreamInput, oneof};
+use rtor::text::{string, sat, ParseResult, digit, char, eof, token, hex, oneof};
 use rtor::combinators::{ between, many, many1, sepby, pair, attempt, opt_or_default};
 
 
 fn main() {
 
-    let mut input = StreamInput::new(fs::File::open("./examples/json_example.json").unwrap());
+    // let mut input = StreamInput::new(fs::File::open("./examples/json_example.json").unwrap());
 
-    let mut input = StreamInput::new(std::io::stdin());
+    // let mut input = StreamInput::new(std::io::stdin());
 
     
     
-    loop {
-        let res = parse_json(&mut input);
-        println!("{:?}", res);
-        println!("{:?}", input.buf);
-    }
+    // loop {
+    //     let res = parse_json(&mut input);
+    //     println!("{:?}", res);
+    //     println!("{:?}", input.buf);
+    // }
 
 }
 

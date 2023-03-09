@@ -101,29 +101,29 @@ impl<I, A, B> Parser<I> for Or<A, B>
     }
 }
 
-pub struct Expect<P, Msg> {
-    pub(crate) parser: P,
-    pub(crate) msg: Msg
-}
+// pub struct Expect<P, Msg> {
+//     pub(crate) parser: P,
+//     pub(crate) msg: Msg
+// }
 
-impl<I, P> Parser<I> for Expect<P, I::Msg> 
-    where P: Parser<I>,
-        I: Input,
-        I::Msg: Clone
-{
-    type Error = P::Error;
-    type Output = Option<P::Output>;
+// impl<I, P> Parser<I> for Expect<P, I::Msg> 
+//     where P: Parser<I>,
+//         I: Input,
+//         I::Msg: Clone
+// {
+//     type Error = P::Error;
+//     type Output = Option<P::Output>;
 
-    fn parse(&mut self, input: &mut I) -> Result<Self::Output, Self::Error> {
-        match self.parser.parse(input) {
-            Ok(v) => Ok(Some(v)),
-            Err(_) => {
-                input.report(self.msg.clone());
-                Ok(None)
-            }
-        }
-    }
-}
+//     fn parse(&mut self, input: &mut I) -> Result<Self::Output, Self::Error> {
+//         match self.parser.parse(input) {
+//             Ok(v) => Ok(Some(v)),
+//             Err(_) => {
+//                 input.report(self.msg.clone());
+//                 Ok(None)
+//             }
+//         }
+//     }
+// }
 
 #[test]
 fn test() {

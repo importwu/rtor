@@ -3,7 +3,7 @@ use std::ops;
 use std::io::Read;
 use std::alloc::{Layout, dealloc, alloc};
 use crate::traits::Input;
-use crate::cursor::{Cursor, CursorGuard};
+// use crate::cursor::{Cursor, CursorGuard};
 use crate::decode::DecodeUtf8Lossy;
 
 use super::position::Position;
@@ -211,40 +211,40 @@ impl<R: Read> Iterator for StreamInput<R> {
 
 type Offset = usize;
 
-impl<R: Read> Input for StreamInput<R> {
-    type Pos = (Offset, Position);
-    type Msg = String;
+// impl<R: Read> Input for StreamInput<R> {
+//     type Pos = (Offset, Position);
+//     type Msg = String;
 
-    fn cursor(&mut self) -> CursorGuard<Self> where Self: Sized {
-        self.cursor_count += 1;
-        CursorGuard::new(self, (self.offset, self.pos))
-    }
+//     fn cursor(&mut self) -> CursorGuard<Self> where Self: Sized {
+//         self.cursor_count += 1;
+//         CursorGuard::new(self, (self.offset, self.pos))
+//     }
 
-    fn restore_callback(&mut self, cursor: Cursor<Self::Pos>) {
-        (self.offset, self.pos) = cursor.pos();
-        self.cursor_count -= 1;
-        if self.cursor_count == 0 {
-            self.buf.truncate_front(self.offset);
-            self.offset = 0;
-        }
-    }
+//     fn restore_callback(&mut self, cursor: Cursor<Self::Pos>) {
+//         (self.offset, self.pos) = cursor.pos();
+//         self.cursor_count -= 1;
+//         if self.cursor_count == 0 {
+//             self.buf.truncate_front(self.offset);
+//             self.offset = 0;
+//         }
+//     }
 
-    fn commit_callback(&mut self, _cursor: Cursor<Self::Pos>) {
-        self.cursor_count -= 1;
-        if self.cursor_count == 0 {
-            self.buf.truncate_front(self.offset);
-            self.offset = 0;
-        }
-    }
+//     fn commit_callback(&mut self, _cursor: Cursor<Self::Pos>) {
+//         self.cursor_count -= 1;
+//         if self.cursor_count == 0 {
+//             self.buf.truncate_front(self.offset);
+//             self.offset = 0;
+//         }
+//     }
 
-    fn report(&mut self, msg: Self::Msg) {
-        self.msgs.push(msg)
-    }
+//     fn report(&mut self, msg: Self::Msg) {
+//         self.msgs.push(msg)
+//     }
 
-    fn finish(self) -> Vec<Self::Msg> {
-        self.msgs
-    }
-}
+//     fn finish(self) -> Vec<Self::Msg> {
+//         self.msgs
+//     }
+// }
 
 
 use crate::combinators::{between, sepby};
@@ -252,10 +252,10 @@ use crate::text::{char, digit};
 use crate::Parser;
 #[test]
 fn test() {
-    let mut input = StreamInput::new("asd".as_bytes());
+    // let mut input = StreamInput::new("asd".as_bytes());
 
-    let mut c = input.cursor();
+    // let mut c = input.cursor();
 
-    drop(input);
+    // drop(input);
 
 }

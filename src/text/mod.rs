@@ -1,13 +1,14 @@
 use super::traits::{Input, Parser};
 
-mod statically;
-mod streaming;
+// mod statically;
+// mod streaming;
 mod error;
-mod position;
+// mod position;
+mod pos;
 
 pub use self::{
-    statically::StaticInput,
-    streaming::StreamInput,
+    // statically::StaticInput,
+    // streaming::StreamInput,
     error::ParseError
 };
 
@@ -116,12 +117,12 @@ pub fn token<I, P>(mut parser: P) -> impl FnMut(&mut I) -> Result<P::Output, P::
     move |input: &mut I| {
         loop {
             let mut cursor = input.cursor();
-            match input.next() {
+            match cursor.next() {
                 Some(ch) => {
                     if ch == ' ' || ch == '\r' || ch == '\n' || ch == '\t' {
                         continue;
                     }
-                    cursor.restore();
+                    cursor.rollback();
                     break
                 },
                 None => break

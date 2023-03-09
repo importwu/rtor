@@ -1,5 +1,5 @@
 use crate::traits::Input;
-use crate::cursor::{Cursor, CursorGuard};
+// use crate::cursor::{Cursor, CursorGuard};
 
 use super::position::Position;
 
@@ -41,29 +41,29 @@ pub struct StaticInput<'a> {
  
  type Offset = usize;
 
- impl<'a> Input for StaticInput<'a> {
+//  impl<'a> Input for StaticInput<'a> {
  
-    type Pos = (Offset, Position);
-    type Msg = String;
+//     type Pos = (Offset, Position);
+//     type Msg = String;
 
-    fn cursor(&mut self) -> CursorGuard<Self> {
-        CursorGuard::new(self, (self.offset, self.pos))
-    }
+//     fn cursor(&mut self) -> CursorGuard<Self> {
+//         CursorGuard::new(self, (self.offset, self.pos))
+//     }
      
-    fn restore_callback(&mut self, cursor: Cursor<Self::Pos>) {
-        (self.offset, self.pos) = cursor.pos();
-    }
+//     fn restore_callback(&mut self, cursor: Cursor<Self::Pos>) {
+//         (self.offset, self.pos) = cursor.pos();
+//     }
     
-    fn commit_callback(&mut self, _cursor: Cursor<Self::Pos>) {}
+//     fn commit_callback(&mut self, _cursor: Cursor<Self::Pos>) {}
 
-    fn report(&mut self, msg: Self::Msg) {
-        self.msgs.push(msg)
-    }
+//     fn report(&mut self, msg: Self::Msg) {
+//         self.msgs.push(msg)
+//     }
 
-    fn finish(self) -> Vec<Self::Msg> {
-        self.msgs
-    }
- }
+//     fn finish(self) -> Vec<Self::Msg> {
+//         self.msgs
+//     }
+//  }
 
 
 use crate::combinators::{between, sepby, pure};

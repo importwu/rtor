@@ -3,7 +3,75 @@ use std::fmt;
 use std::ptr::copy_nonoverlapping;
 use std::ops::Index;
 
-#[derive(Debug)]
+pub struct Utf8Stream<R> {
+    decode_utf8: DecodeUtf8<R>,
+    peeked: Buffer
+}
+
+impl<R: Read> Utf8Stream<R> {
+
+    pub fn new(reader: R) -> Self {
+
+        Self {
+            decode_utf8: DecodeUtf8::new(reader),
+            peeked: Buffer::with_capacity(8)
+        }
+    }
+
+    pub fn peek(&mut self, count: usize) -> Option<Result<char, Utf8StreamError>> {
+
+        if count < self.peeked.len() {
+            match self.peeked[count] {
+                Ok(t) => return Some(Ok(t)),
+                Err(e) => return Some(Err(Utf8StreamError::DecodeUtf8Error(e)))
+            }
+        }
+
+        for _ in self.peeked.len()..count + 1 {
+            match self.decode_utf8.next()? {
+                Ok(t) => {
+                    self.peeked.push_back(Ok(t));
+                    continue;
+                },
+                Err(Utf8StreamError::DecodeUtf8Error(e)) => {
+                    self.peeked.push_back(Err(e));
+                    continue;
+                }
+                Err(e) => return Some(Err(e))
+            }
+        }
+
+        match self.peeked[count] {
+            Ok(t) => return Some(Ok(t)),
+            Err(e) => return Some(Err(Utf8StreamError::DecodeUtf8Error(e)))
+        }
+    }
+
+    pub fn peeked(&self) -> &Buffer{
+        &self.peeked
+    }
+
+    pub fn peeked_mut(&mut self) -> &mut Buffer{
+        &mut self.peeked
+    }
+
+}
+
+impl<R: Read> Iterator for Utf8Stream<R> {
+    type Item = Result<char, Utf8StreamError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+
+        match self.peeked.pop_front() {
+            None => return self.decode_utf8.next(),
+            Some(r) => match r {
+                Ok(t) => Some(Ok(t)),
+                Err(e) => Some(Err(Utf8StreamError::DecodeUtf8Error(e)))
+            }
+        }
+    }
+}
+
 pub struct Buffer {
     buf: Vec<Result<char, DecodeUtf8Error>>,
     cap: usize,
@@ -13,6 +81,7 @@ pub struct Buffer {
 }
 
 impl Buffer {
+
     fn with_capacity(cap: usize) -> Self {
         let mut buf = Vec::with_capacity(cap);
         unsafe { buf.set_len(cap) }
@@ -55,7 +124,7 @@ impl Buffer {
     }
 
     #[inline]
-    fn consume(&mut self, count: usize) {
+    pub fn consume(&mut self, count: usize) {
         let count = if count >= self.len { self.len } else { count };
 
         self.head = (self.head + count) % self.cap;
@@ -76,8 +145,8 @@ impl Buffer {
         
         unsafe {
             copy_nonoverlapping(
-                self.buf.as_ptr().add(self.head), 
-                new_buf.as_mut_ptr(), 
+                self.buf.as_ptr().add(self.head),
+                new_buf.as_mut_ptr(),
                 count
             );
 
@@ -99,78 +168,36 @@ impl Index<usize> for Buffer {
     type Output = Result<char, DecodeUtf8Error>;
 
     fn index(&self, index: usize) -> &Self::Output {
+        assert!(index < self.len());
         let index = (self.head + index) % self.cap;
         &self.buf[index]
     }
 }
 
-pub struct Utf8Stream<R> {
-    decode_utf8: DecodeUtf8<R>,
-    peeked: Buffer
-}
+impl fmt::Debug for Buffer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 
-impl<R: Read> Utf8Stream<R> {
-    pub fn new(reader: R) -> Self {
-        Self {
-            decode_utf8: DecodeUtf8::new(reader),
-            peeked: Buffer::with_capacity(1)
-        }
-    }
+        let mut buf = vec![];
 
-    pub fn peeked(&self) -> &Buffer{
-        &self.peeked
-    }
-
-    pub fn peeked_mut(&mut self) -> &mut Buffer{
-        &mut self.peeked
-    }
-
-    pub fn peek(&mut self, count: usize) -> Option<Result<char, Utf8StreamError>> {
-        let peeked_len = self.peeked.len();
-
-        if count < peeked_len {
-            match self.peeked[count] {
-                Ok(t) => return Some(Ok(t)),
-                Err(e) => return Some(Err(Utf8StreamError::DecodeUtf8Error(e)))
+        if self.tail > self.head { 
+            buf.extend_from_slice(&self.buf[self.head..self.tail]);
+        }else {
+            if self.len != 0 {
+                buf.extend_from_slice(&self.buf[self.head..self.cap]);
+                buf.extend_from_slice(&self.buf[0..self.tail]);
             }
         }
 
-        for _ in peeked_len..count + 1 {
-            let r = self.decode_utf8.next()?;
-            match r {
-                Ok(t) => {
-                    self.peeked.push_back(Ok(t));
-                    continue;
-                },
-                Err(Utf8StreamError::DecodeUtf8Error(e)) => {
-                    self.peeked.push_back(Err(e));
-                    continue;
-                }
-                Err(e) => return Some(Err(e))
-            }
-        }
+        f.debug_struct("Buffer")
+            .field("cap", &self.cap)
+            .field("head", &self.head)
+            .field("tail", &self.tail)
+            .field("len", &self.len)
+            .field("buf", &buf)
+            .finish()
 
-        match self.peeked[count] {
-            Ok(t) => return Some(Ok(t)),
-            Err(e) => return Some(Err(Utf8StreamError::DecodeUtf8Error(e)))
-        }
-    }
-}
+        // f.debug_list().entries(&buf).finish()
 
-impl<R: Read> Iterator for Utf8Stream<R> {
-    type Item = Result<char, Utf8StreamError>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.peeked.is_empty() { 
-            return self.decode_utf8.next();
-        }
-
-        let peeked = self.peeked.pop_front()?;
-
-        match peeked {
-            Ok(t) => Some(Ok(t)),
-            Err(e) => Some(Err(Utf8StreamError::DecodeUtf8Error(e)))
-        }
     }
 }
 
@@ -200,26 +227,27 @@ impl<R: Read> Iterator for Bytes<R> {
     type Item = Result<u8, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if self.pos < self.filled {
-                break;
-            }
 
+        if self.pos < self.filled {
+            let v = self.buf[self.pos];
+            self.pos += 1;
+            return Some(Ok(v));
+        }
+
+        loop {
             match self.reader.read(&mut self.buf) {
                 Ok(0) => return None,
                 Ok(n) => {
                     self.filled = n;
-                    self.pos = 0;
-                    continue;
+                    self.pos = 1;
+                    return Some(Ok(self.buf[0]));
                 }
                 Err(e) if e.kind() == ErrorKind::Interrupted => continue,
                 Err(e) => return Some(Err(e))
             }
         }
 
-        let v = self.buf[self.pos];
-        self.pos += 1;
-        Some(Ok(v))
+        
     }
 }
 
@@ -268,12 +296,9 @@ impl<R: Read> Iterator for DecodeUtf8<R> {
         let x = match self.buf.take() {
             Some(t) => t,
             None => 
-                match self.bytes.next() {
-                    Some(r) => match r {
-                        Ok(t) => t,
-                        Err(e) => return Some(Err(Utf8StreamError::IoError(e)))
-                    }
-                    None => return None
+                match self.bytes.next()? {
+                    Ok(t) => t,
+                    Err(e) => return Some(Err(Utf8StreamError::IoError(e)))
                 }
         };
                    
@@ -369,9 +394,9 @@ fn test() {
 
     let mut stream = Utf8Stream::new(b"Hello \xF0\x90\x80World".as_slice());
 
-    println!("{:?}", stream.peek(1));
+    println!("{:?}", stream.peek(7));
     println!("{:?}", stream.peeked_mut().consume(1));
-    println!("{:?}", stream.peek(1));
+    println!("{:?}", stream.peek(7));
 
 
     println!("{:?}", stream.peeked())
