@@ -4,11 +4,20 @@ Parser Combinator Library
 # Example
 
 ```rust
-use rtor::text::{StaticInput, digit, char};
-use rtor::combinators::{sepby, between};
+use rtor::{
+    State,
+    combine::{
+        sepby,
+        between
+    },
+    primitive::{
+        digit,
+        char
+    }
+};
 
 fn main() {
-    let mut input = StaticInput::new("[1,2,3,4,5,6]");
+    let mut state = State::new("[1,2,3,4,5,6]");
     
     let mut parser = between(
       char('['), 
@@ -16,6 +25,6 @@ fn main() {
       char(']')
     );
     
-    assert_eq!(parser.parse(&mut input), Ok(vec![1,2,3,4,5,6]));
+    assert_eq!(parser.parse(&mut state), Ok(vec![1,2,3,4,5,6]));
 }
 ```
