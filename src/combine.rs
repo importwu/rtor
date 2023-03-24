@@ -3,66 +3,11 @@ use std::ops::{
     Bound
 };
 
-use crate::{Parser, State
+use crate::{
+    Parser, 
+    State
 };
 
-
-// pub fn attempt<I, P>(mut parser: P)  -> impl Parser<I, Output = P::Output, Error = P::Error>
-//     where I: Input,
-//         P: Parser<I, Error = ParseError>
-// {
-//     move |input: &mut I| {
-//         let mut cursor = input.cursor();
-//         match parser.parse(&mut cursor) {
-//             Ok(t) => Ok(t),
-//             Err(e) => match &e.message {
-//                 Message::Fatal(_) => Err(e),
-//                 _ => {
-//                     cursor.rollback();
-//                     Err(e)
-//                 }
-//             }
-//         }
-//     }
-// }
-
-
-// #[inline]
-// pub fn refer<'a, I, P>(parser: &'a mut P) -> impl Parser<I, Output = P::Output, Error = P::Error> + 'a
-//     where P: Parser<I>
-// {
-//     move |input: &mut I| {
-//         (*parser).parse(input)
-//     }
-// }
-
-
-
-// pub fn between<I, L, M, R>(mut lparser: L, mut mparser: M, mut rparser: R) -> impl Parser<I, Output = M::Output, Error = M::Error> 
-//     where L: Parser<I, Error = M::Error>,
-//         M: Parser<I, Error = ParseError>,
-//         R: Parser<I, Error = M::Error>
-// {
-//     move |input: &mut I| {
-//         lparser.parse(input)?;
-//         let m = mparser.parse(input).map_err(|e| e.into_consume())?;
-//         rparser.parse(input).map_err(|e| e.into_consume())?;
-//         Ok(m)
-//     }
-// }
-
-// pub fn pair<I, L, M, R>(mut lparser: L, mut mparser: M, mut rparser: R) ->  impl Parser<I, Output = (L::Output, R::Output), Error = L::Error>
-//     where L: Parser<I>,
-//         M: Parser<I, Error = L::Error>,
-//         R: Parser<I, Error = L::Error>
-// {
-//     move |input: &mut I| {
-//         let left = lparser.parse(input)?;
-//         mparser.parse(input)?;
-//         let right = rparser.parse(input)?;
-//         Ok((left, right))
-//     }
-// }
 
 // pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
 //     where I: Input,
@@ -111,96 +56,6 @@ use crate::{Parser, State
 //     }
 // }
 
-// pub fn sepby<I, P, D>(mut parser: P, mut delim: D) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
-//     where I: Input, 
-//         P: Parser<I>, 
-//         D: Parser<I> 
-// {
-//     move |input: &mut I| {
-//         let mut result = vec![];
-
-//         match parser.parse(input) {
-//             Ok(t) => result.push(t),
-//             Err(_) => return Ok(result)
-//         }
-
-//         loop {
-            
-//             if let Err(_) = delim.parse(input) {
-//                 break
-//             }
-
-//             result.push(parser.parse(input)?);
-//         }
-
-//         Ok(result)
-//     }
-// }
-
-// pub fn sepby1<I, P, D>(mut parser: P, mut delim: D) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
-//     where I: Input, 
-//         P: Parser<I>, 
-//         D: Parser<I> 
-// {
-//     move |input: &mut I| {
-//         let mut result = vec![];
-
-//         result.push(parser.parse(input)?);
-
-//         loop {
-            
-//             {
-//                 if let Err(_) = delim.parse(input) {
-//                     break
-//                 }
-//             }
-            
-//             result.push(parser.parse(input)?);
-//         }
-        
-//         Ok(result)
-//     }
-// }
-
-// pub fn many<I, P>(mut parser: P) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error>   
-//     where I: Input,
-//         P: Parser<I>  
-// {
-
-//     move |input: &mut I| {
-//         let mut result = vec![];
-
-//         loop {
-//             match parser.parse(input) {
-//                 Ok(v) => result.push(v),
-//                 Err(_) => break
-//             }
-//         }
-
-//         Ok(result)
-//     }
-// }
-
-// pub fn many1<I, P>(mut parser: P) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
-//     where I: Input,
-//         P: Parser<I>  
-// {
-
-//     move |input: &mut I| {
-//         let mut result = vec![];
-
-//         result.push(parser.parse(input)?);
-
-//         loop {
-//             match parser.parse(input) {
-//                 Ok(v) => result.push(v),
-//                 Err(_) => break
-//             }
-//         }
-
-//         Ok(result)
-//     }
-// }
 
 // pub fn range<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 //     where I: Input,
@@ -402,15 +257,19 @@ pub fn sepby<U, P, S>(mut parser: P, mut sep: S) -> impl Parser<U, Output = Vec<
 
 mod test {
 
-    use crate::primitive::char;
+    use crate::primitive::{char, digit};
 
     use super::*;
 
     #[test]
     fn test() {
-        let mut state = State::new("1,1aaaaa1avaaa");
+        let mut state = State::new("[1,2,3,4,5,6]");
 
-        let mut p = sepby(char('1'), char(','));
+        let mut p = between(
+            char('['), 
+            sepby(digit(), char(',')), 
+            char(']')
+        );
 
         println!("{:?}", p.parse(&mut state));
 

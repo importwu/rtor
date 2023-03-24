@@ -20,6 +20,9 @@ pub fn char<U>(ch: char) -> impl Parser<U, Output = char> where
     satisfy(move |t| *t == ch)
 }
 
+pub fn digit<U>() -> impl Parser<U, Output = char> {
+    satisfy(char::is_ascii_digit)
+}
 
 mod test {
 
