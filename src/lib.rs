@@ -1,16 +1,19 @@
-mod traits;
-pub mod combinators;
-// mod bytereader;
-// mod decode;
-// mod cursor;
-pub mod text;
-pub mod adapters;
+mod parser;
 
-pub mod stream;
+mod state;
 
-pub mod cursor;
+mod error;
+
+mod pos;
+
+pub mod primitive;
+
+pub mod combine;
 
 pub use self::{
-    traits::{Parser, Input},
+    error::ParseError,
+    parser::Parser,
+    state::State,
+    pos::Pos
 };
 
