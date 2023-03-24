@@ -316,7 +316,8 @@ pub fn pair<U, L, M, R>(mut lparser: L, mut mparser: M, mut rparser: R) ->  impl
 }
 
 
-pub fn many<U: Clone, P>(mut parser: P) -> impl Parser<U, Output = Vec<P::Output>> where
+pub fn many<U, P>(mut parser: P) -> impl Parser<U, Output = Vec<P::Output>> where
+    U: Clone,
     P: Parser<U>
 {
     move |state: &mut State<U>| {
@@ -337,7 +338,8 @@ pub fn many<U: Clone, P>(mut parser: P) -> impl Parser<U, Output = Vec<P::Output
     }
 }
 
-pub fn many1<U: Clone, P>(mut parser: P) -> impl Parser<U, Output = Vec<P::Output>> where
+pub fn many1<U, P>(mut parser: P) -> impl Parser<U, Output = Vec<P::Output>> where
+    U: Clone,
     P: Parser<U>
 {
     move |state: &mut State<U>| {
@@ -360,6 +362,44 @@ pub fn many1<U: Clone, P>(mut parser: P) -> impl Parser<U, Output = Vec<P::Outpu
     }
 }
 
+pub fn sepby<U, P, S>(mut parser: P, mut sep: S) -> impl Parser<U, Output = Vec<P::Output>> where
+        U: Clone,
+        P: Parser<U>, 
+        S: Parser<U> 
+{
+    move |state: &mut State<U>| {
+        let mut result = vec![];
+
+        let mut state_cloned = state.clone();
+
+        match parser.parse(&mut state_cloned) {
+            Ok(t) => {
+                *state = state_cloned;
+                result.push(t);
+            },
+            Err(_) => return Ok(result)
+        }
+
+        loop {
+            let mut state_cloned = state.clone();
+
+            if let Err(_) = sep.parse(&mut state_cloned) {
+                break
+            }
+
+            match parser.parse(&mut state_cloned) {
+                Ok(t) => {
+                    *state = state_cloned;
+                    result.push(t);
+                },
+                Err(_) => return Ok(result)
+            }
+        }
+
+        Ok(result)
+    }
+}
+
 mod test {
 
     use crate::primitive::char;
@@ -368,9 +408,9 @@ mod test {
 
     #[test]
     fn test() {
-        let mut state = State::new("aaaaa1avaaa");
+        let mut state = State::new("1,1aaaaa1avaaa");
 
-        let mut p = between(many(char('a')), char('1'), many1(char('a')));
+        let mut p = sepby(char('1'), char(','));
 
         println!("{:?}", p.parse(&mut state));
 
