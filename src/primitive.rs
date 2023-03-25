@@ -98,6 +98,8 @@ pub fn eof<U>() -> impl Parser<U, Output = ()> {
 
 mod test {
 
+    use crate::combine::pure;
+
     use super::*;
 
     #[test]
@@ -108,12 +110,17 @@ mod test {
         //     .or(char('v'))
         //     .or(space());
 
-        let mut a = char('b')
-            .and_then(|x| char(x));
+        let mut a = string("b")
+            .and_then(|x| {
+                string("d").and_then(|y| {
+                    string("f").and_then(move|z| {
+                        pure((x.clone(), y.clone(), z.clone()))
+                    })
+                })
+            });
 
         println!("{:?}", a.parse(&mut state));
         println!("{:?}", state);
-
 
     }
 }

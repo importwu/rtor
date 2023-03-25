@@ -218,7 +218,7 @@ pub fn repeat<U, P>(mut parser: P, n: usize) -> impl Parser<U, Output = Vec<P::O
     }
 }
 
-pub fn pure<U, T: Clone, E>(t: T) -> impl Parser<U, Output = T> {
+pub fn pure<U, T: Clone>(t: T) -> impl Parser<U, Output = T> {
     move|_state: &mut State<U>| {
         Ok(t.clone())
     }
