@@ -1,8 +1,3 @@
-use std::ops::{
-    RangeBounds, 
-    Bound
-};
-
 use crate::{
     Parser, 
     State
@@ -44,67 +39,8 @@ use crate::{
 //     }
 // }
 
-// pub fn repeat<I, P>(mut parser: P, n: usize) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
-//     where P: Parser<I>
-// {
-//     move |input: &mut I| {
-//         let mut result = vec![];
-//         for _ in 0..n {
-//             result.push(parser.parse(input)?);
-//         }
-//         Ok(result)
-//     }
-// }
 
 
-// pub fn range<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
-//     where I: Input,
-//         P: Parser<I>,
-//         R: RangeBounds<usize>  
-// {
-
-//     let min = match range.start_bound() {
-//         Bound::Unbounded => 0,
-//         Bound::Included(&i) => i,
-//         Bound::Excluded(_) => unreachable!()
-//     };
-
-//     let max = match range.end_bound() {
-//         Bound::Unbounded => None,
-//         Bound::Included(_) => unreachable!(),
-//         Bound::Excluded(&i) => {
-//             assert!(min <= i, "range({}..{}), is invalid", min, i);
-//             Some(i)
-//         }
-//     };
-
-//     move |input: &mut I| {
-//         let mut result = vec![];
-        
-//         for _ in 0..min {
-//             let v = parser.parse(input)?;
-//             result.push(v);
-//         }
-
-//         if let Some(max) = max {
-//             for _ in min..max {
-//                 match parser.parse(input) {
-//                     Ok(v) => result.push(v),
-//                     Err(_) => break
-//                 }
-//             }
-//         }else {
-//             loop {
-//                 match parser.parse(input) {
-//                     Ok(v) => result.push(v),
-//                     Err(_) => break
-//                 }
-//             }
-//         }
-
-//         Ok(result)
-//     }
-// } 
 
 // pub fn ignore<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error> 
 //     where I: Input,
@@ -122,23 +58,7 @@ use crate::{
 //     }
 // }
 
-// pub fn peek<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = P::Error>
-//     where I: Input,
-//         P: Parser<I>
-// {
-//     move|input: &mut I| {
-//         let mut cursor = input.cursor();
-//         let res = parser.parse(&mut cursor);
-//         cursor.rollback();
-//         res
-//     }
-// }
 
-// pub fn pure<I, T: Clone, E>(v: T) -> impl Parser<I, Output = T, Error = E> {
-//     move|_input: &mut I| {
-//         Ok(v.clone())
-//     }
-// }
 
 
 
@@ -252,6 +172,70 @@ pub fn sepby<U, P, S>(mut parser: P, mut sep: S) -> impl Parser<U, Output = Vec<
         }
 
         Ok(result)
+    }
+}
+
+pub fn sepby1<U, P, S>(mut parser: P, mut sep: S) -> impl Parser<U, Output = Vec<P::Output>> where
+        U: Clone,
+        P: Parser<U>, 
+        S: Parser<U> 
+{
+    move |state: &mut State<U>| {
+        let mut result = vec![];
+       
+        result.push(parser.parse(state)?);
+
+        loop {
+            let mut state_cloned = state.clone();
+
+            if let Err(_) = sep.parse(&mut state_cloned) {
+                break
+            }
+
+            match parser.parse(&mut state_cloned) {
+                Ok(t) => {
+                    *state = state_cloned;
+                    result.push(t);
+                },
+                Err(_) => return Ok(result)
+            }
+        }
+
+        Ok(result)
+    }
+}
+
+
+pub fn repeat<U, P>(mut parser: P, n: usize) -> impl Parser<U, Output = Vec<P::Output>> 
+    where P: Parser<U>
+{
+    move |state: &mut State<U>| {
+        let mut result = vec![];
+        for _ in 0..n {
+            result.push(parser.parse(state)?);
+        }
+        Ok(result)
+    }
+}
+
+pub fn pure<U, T: Clone, E>(t: T) -> impl Parser<U, Output = T> {
+    move|_state: &mut State<U>| {
+        Ok(t.clone())
+    }
+}
+
+pub fn attempt<U, P>(parser: P) -> impl Parser<U, Output = P::Output> where
+    P: Parser<U>
+{
+    move |state: &mut State<U>| {
+        let state_cloned = state.clone();
+        match parser.parse(state_cloned) {
+            Ok(t) => {
+                *state = state_cloned;
+                Ok(t)
+            }
+            Err(e) => Err(e)
+        }
     }
 }
 
