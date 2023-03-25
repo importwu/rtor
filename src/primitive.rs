@@ -34,9 +34,10 @@ mod test {
         let mut state = State::new("bdf");
 
         let mut a = digit()
-            .or(char('v'));
+            .or(char('v'))
+            .or(char('a'));
 
-        println!("{:?}", a.parse(&mut state));
+        println!("{}", a.parse(&mut state).err().unwrap());
         println!("{:?}", state)
 
     }

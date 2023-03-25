@@ -5,11 +5,3 @@ version = 3
 [[package]]
 name = "rtor"
 version = "0.1.0"
-dependencies = [
- "utf8-stream",
-]
-
-[[package]]
-name = "utf8-stream"
-version = "0.1.0"
-source = "git+https://github.com/importwu/utf8-stream.git#3534d1227a53644e0eb01ca7cb9028e692de65d7"
