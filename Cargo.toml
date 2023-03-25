@@ -2,7 +2,3 @@
 name = "rtor"
 version = "0.1.0"
 edition = "2021"
-
-
-[dependencies]
-utf8-stream = { git = "https://github.com/importwu/utf8-stream.git" }

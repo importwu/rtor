@@ -23,6 +23,10 @@ pub trait Parser<U> {
     {
         Or { aparser: self, bparser }
     }
+
+    fn expect(self, msg: &str) -> Expect<Self> where Self: Sized {
+        Expect {parser: self, msg: msg.to_owned()}
+    }
 }
 
 impl<F, U, O> Parser<U> for F where 
@@ -68,29 +72,29 @@ impl<U: Clone, A, B> Parser<U> for Or<A, B> where
     fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
         match self.aparser.parse(&mut state.clone()) {
             Ok(t) => Ok(t),
-            Err(aparser_err) => match self.bparser.parse(state) {
+            Err(e1) => match self.bparser.parse(state) {
                 Ok(t) => Ok(t),
-                Err(bparser_err) => Err(aparser_err.merge(bparser_err))
+                Err(e2) => Err(e1.merge(e2))
             }
         }
     }
 }
 
 
-// pub struct Expect<P> {
-//     msg: String,
-//     parser: P
-// }
+pub struct Expect<P> {
+    pub(crate) msg: String,
+    pub(crate) parser: P
+}
 
-// impl<I, P> Parser<I> for Expect<P> where 
-//     P: Parser<I>
-// {
-//     type Output = P::Output;
+impl<U, P> Parser<U> for Expect<P> where 
+    P: Parser<U>
+{
+    type Output = P::Output;
 
-//     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I> {
-//         match self.parser.parse(input) {
-//             Ok(t) => Ok(t),
-//             Err(e) => todo!()
-//         }
-//     }
-// } 
+    fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
+        match self.parser.parse(state) {
+            Ok(t) => Ok(t),
+            Err(e) => Err(ParseError { pos: e.pos, unexpect: e.unexpect, expect: vec![self.msg.clone()] })
+        }
+    }
+} 

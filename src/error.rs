@@ -1,54 +1,29 @@
+use crate::Pos;
+
+use std::cmp::Ordering;
+
 #[derive(Debug)]
-pub enum ParseError {
-    Multi(Vec<ParseError>),
-    Expect {
-        expect: Option<String>,
-        found: Option<String>
-    }
+pub struct ParseError {
+    pub(crate) pos: Pos,
+    pub(crate) unexpect: Option<String>,
+    pub(crate) expect: Vec<String>
 }
 
 impl ParseError {
-
-    pub fn merge(self, other: Self) -> Self {
-        match self {
-            Self::Multi(mut errs) => match other {
-                Self::Multi(mut other_errs) => {
-                    errs.append(&mut other_errs);
-                    ParseError::Multi(errs)
-                }
-                other_err@Self::Expect { expect: _, found: _ }  => {
-                    errs.push(other_err);
-                    ParseError::Multi(errs)
-                }
-            },
-            err@Self::Expect { expect: _, found: _ } => match other {
-                Self::Multi(mut other_errs) => {
-                    let mut errs = vec![err];
-                    errs.append(&mut other_errs);
-                    ParseError::Multi(errs)
-                }
-                other_err@Self::Expect { expect:_, found:_} => {
-                    let mut errs = vec![err];
-                    errs.push(other_err);
-                    ParseError::Multi(errs)
-                }
-            }
+    pub fn merge(mut self, mut other: Self) -> Self {
+        if self.expect.is_empty() && !other.expect.is_empty() {
+            return other
         }
-    }
-
-    fn expect(self, msg: &str) -> Self {
-        todo!()
-    }
-}
-
-
-mod err {
-    use crate::Pos;
-
-
-    #[derive(Debug)]
-    pub struct ParseError {
-        pos: Pos,
-        // ex
+        if !self.expect.is_empty() && other.expect.is_empty() {
+            return self
+        }
+        match self.pos.cmp(&other.pos) {
+            Ordering::Equal => {
+                self.expect.append(&mut other.expect);
+                self
+            },
+            Ordering::Greater => self,
+            Ordering::Less => other
+        }
     }
 }
