@@ -224,12 +224,13 @@ pub fn pure<U, T: Clone, E>(t: T) -> impl Parser<U, Output = T> {
     }
 }
 
-pub fn attempt<U, P>(parser: P) -> impl Parser<U, Output = P::Output> where
+pub fn attempt<U, P>(mut parser: P) -> impl Parser<U, Output = P::Output> where
+    U: Clone,
     P: Parser<U>
 {
     move |state: &mut State<U>| {
-        let state_cloned = state.clone();
-        match parser.parse(state_cloned) {
+        let mut state_cloned = state.clone();
+        match parser.parse(&mut state_cloned) {
             Ok(t) => {
                 *state = state_cloned;
                 Ok(t)
@@ -238,6 +239,8 @@ pub fn attempt<U, P>(parser: P) -> impl Parser<U, Output = P::Output> where
         }
     }
 }
+
+
 
 mod test {
 

@@ -86,6 +86,16 @@ pub fn anychar<U>() -> impl Parser<U, Output = char> {
     satisfy(|_| true).expect("anychar")
 }
 
+pub fn eof<U>() -> impl Parser<U, Output = ()> {
+    |state: &mut State<U>| {
+        let pos = state.pos();
+        match state.next() {
+            None => Ok(()),
+            Some(t) => Err(ParseError { pos, expect: vec!["<eof>".to_owned()], unexpect: Some(t.into()) })
+        }
+    }
+}
+
 mod test {
 
     use super::*;
@@ -98,10 +108,11 @@ mod test {
         //     .or(char('v'))
         //     .or(space());
 
-        let mut a = noneof("vbdf");
+        let mut a = char('b').and(char('d'));
 
-        println!("{}", a.parse(&mut state).err().unwrap());
+        println!("{:?}", a.parse(&mut state));
         println!("{:?}", state);
+
 
     }
 }
