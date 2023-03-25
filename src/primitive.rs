@@ -108,7 +108,8 @@ mod test {
         //     .or(char('v'))
         //     .or(space());
 
-        let mut a = char('b').and(char('d'));
+        let mut a = char('b')
+            .and_then(|x| char(x));
 
         println!("{:?}", a.parse(&mut state));
         println!("{:?}", state);

@@ -39,6 +39,14 @@ pub trait Parser<U> {
         And { aparser: self, bparser }
     }
 
+    fn and_then<F, P>(self, f: F) -> AndThen<Self, F> where
+        Self: Sized,
+        P: Parser<U>,
+        F: FnMut(Self::Output) -> P
+    {
+        AndThen { parser: self, f }
+    }
+
     fn expect(self, msg: &str) -> Expect<Self> where Self: Sized {
         Expect {parser: self, msg: msg.to_owned()}
     }
@@ -78,9 +86,9 @@ pub struct MapErr<P, F> {
     f: F
 }
 
-impl<U, P, F, R> Parser<U> for MapErr<P, F> where 
+impl<U, P, F> Parser<U> for MapErr<P, F> where 
     P: Parser<U>,
-    F: FnMut(ParseError) -> R
+    F: FnMut(ParseError) -> ParseError
 {
     type Output = P::Output;
 
@@ -128,7 +136,27 @@ impl<U, A, B> Parser<U> for And<A, B> where
 
     fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
         match self.aparser.parse(state) {
-            Ok(t) => self.bparser.parse(state),
+            Ok(_t) => self.bparser.parse(state),
+            Err(e) => Err(e)
+        }
+    }
+}
+
+pub struct AndThen<P, F> {
+    parser: P,
+    f: F
+}
+
+impl<U, A, B, F> Parser<U> for AndThen<A, F> where
+    A: Parser<U>,
+    B: Parser<U>,
+    F: FnMut(A::Output) -> B
+{
+    type Output = B::Output;
+
+    fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
+        match self.parser.parse(state) {
+            Ok(t) => (self.f)(t).parse(state),
             Err(e) => Err(e)
         }
     }
