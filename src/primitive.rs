@@ -106,18 +106,18 @@ mod test {
     fn test() {
         let mut state = State::new("bdf");
 
-        // let mut a = digit()
-        //     .or(char('v'))
-        //     .or(space());
+        let mut a = digit()
+            .or(char('v'))
+            .or(space());
 
-        let mut a = string("b")
-            .and_then(|x| {
-                string("d").and_then(|y| {
-                    string("f").and_then(move|z| {
-                        pure((x.clone(), y.clone(), z.clone()))
-                    })
-                })
-            });
+        // let mut a = string("b")
+        //     .and_then(|x| {
+        //         string("d").and_then(|y| {
+        //             string("f").and_then(move|z| {
+        //                 pure((x.clone(), y.clone(), z.clone()))
+        //             })
+        //         })
+        //     });
 
         println!("{:?}", a.parse(&mut state));
         println!("{:?}", state);

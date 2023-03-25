@@ -12,43 +12,45 @@ pub trait Parser<U> {
     fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output>;
 
     fn map<F, R>(self, f: F) -> Map<Self, F> where 
-        Self: Sized,
-        F: FnMut(Self::Output) -> R 
+        F: FnMut(Self::Output) -> R,
+        Self: Sized
     {
         Map { parser: self, f }
     }
 
     fn map_err<F, R>(self, f: F) -> MapErr<Self, F> where 
-        Self: Sized,
-        F: FnMut(ParseError) -> R 
+        F: FnMut(ParseError) -> R,
+        Self: Sized
     {
         MapErr { parser: self, f }
     }
 
     fn or<P>(self, bparser: P) -> Or<Self, P> where
-        Self: Sized,
-        P: Parser<U, Output = Self::Output>
+        P: Parser<U, Output = Self::Output>,
+        Self: Sized
     {
         Or { aparser: self, bparser }
     }
 
     fn and<P>(self, bparser: P) -> And<Self, P> where
-        Self: Sized,
-        P: Parser<U>
+        P: Parser<U>,
+        Self: Sized
     {
         And { aparser: self, bparser }
     }
 
     fn and_then<F, P>(self, f: F) -> AndThen<Self, F> where
-        Self: Sized,
         P: Parser<U>,
-        F: FnMut(Self::Output) -> P
+        F: FnMut(Self::Output) -> P,
+        Self: Sized
     {
         AndThen { parser: self, f }
     }
 
-    fn expect(self, msg: &str) -> Expect<Self> where Self: Sized {
-        Expect {parser: self, msg: msg.to_owned()}
+    fn expect(self, msg: &str) -> Expect<Self> where 
+        Self: Sized 
+    {
+        Expect { parser: self, msg: msg.to_owned() }
     }
 }
 
@@ -74,10 +76,8 @@ impl<U, P, F, R> Parser<U> for Map<P, F> where
     type Output = R;
 
     fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
-        match self.parser.parse(state) {
-            Ok(t) => Ok((self.f)(t)),
-            Err(e) => Err(e)
-        }
+        let o = self.parser.parse(state)?;
+        Ok((self.f)(o))
     }
 }
 
@@ -135,10 +135,8 @@ impl<U, A, B> Parser<U> for And<A, B> where
     type Output = B::Output;
 
     fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
-        match self.aparser.parse(state) {
-            Ok(_t) => self.bparser.parse(state),
-            Err(e) => Err(e)
-        }
+        self.aparser.parse(state)?;
+        self.bparser.parse(state)
     }
 }
 
@@ -155,10 +153,8 @@ impl<U, A, B, F> Parser<U> for AndThen<A, F> where
     type Output = B::Output;
 
     fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
-        match self.parser.parse(state) {
-            Ok(t) => (self.f)(t).parse(state),
-            Err(e) => Err(e)
-        }
+        let o = self.parser.parse(state)?;
+        (self.f)(o).parse(state)
     }
 }
 
