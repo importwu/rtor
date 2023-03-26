@@ -91,24 +91,22 @@ pub fn eof<U>() -> impl Parser<U, Output = ()> {
         let pos = state.pos();
         match state.next() {
             None => Ok(()),
-            Some(t) => Err(ParseError { pos, expect: vec!["<eof>".to_owned()], unexpect: Some(t.into()) })
+            Some(t) => Err(ParseError { pos, expect: vec!["<eof>".into()], unexpect: Some(t.into()) })
         }
     }
 }
 
 mod test {
 
-    use crate::combine::pure;
+    use crate::combine::{pure, opt_or};
 
     use super::*;
 
     #[test]
     fn test() {
-        let mut state = State::new("bdf");
+        let mut state = State::new("c");
 
-        let mut a = digit()
-            .or(char('v'))
-            .or(space());
+        let mut a = opt_or(char('c'), 'b');
 
         // let mut a = string("b")
         //     .and_then(|x| {
@@ -121,6 +119,5 @@ mod test {
 
         println!("{:?}", a.parse(&mut state));
         println!("{:?}", state);
-
     }
 }

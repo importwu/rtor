@@ -24,6 +24,11 @@ impl<'a, U> State<'a, U> {
     pub fn pos(&self) -> Pos {
         self.pos
     }
+
+    #[inline]
+    pub fn as_str(&self) -> &str {
+        self.inner.as_str()
+    }
 }
 
 impl<'a> State<'a, ()> {
