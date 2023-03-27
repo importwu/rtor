@@ -7,9 +7,9 @@ use std::{
 
 #[derive(Debug)]
 pub struct ParseError {
-    pub pos: Pos,
-    pub unexpect: Option<String>,
-    pub expect: Vec<String>
+    pos: Pos,
+    unexpect: Option<String>,
+    expect: Vec<String>
 }
 
 impl ParseError {

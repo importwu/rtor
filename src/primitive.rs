@@ -104,18 +104,16 @@ mod test {
 
     #[test]
     fn test() {
-        let mut state = State::new("c");
+        let mut state = State::new("abc");
 
-        let mut a = opt_or(char('c'), 'b');
-
-        // let mut a = string("b")
-        //     .and_then(|x| {
-        //         string("d").and_then(|y| {
-        //             string("f").and_then(move|z| {
-        //                 pure((x.clone(), y.clone(), z.clone()))
-        //             })
-        //         })
-        //     });
+        let mut a = string("a")
+            .and_then(|x| {
+                string("b").and_then(move |y| {
+                    string("c").and_then(move|z| {
+                        pure((x, y, z))
+                    })
+                })
+            });
 
         println!("{:?}", a.parse(&mut state));
         println!("{:?}", state);

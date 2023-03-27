@@ -41,7 +41,7 @@ pub trait Parser<U> {
 
     fn and_then<F, P>(self, f: F) -> AndThen<Self, F> where
         P: Parser<U>,
-        F: FnMut(Self::Output) -> P,
+        F: FnOnce(Self::Output) -> P + Clone,
         Self: Sized
     {
         AndThen { parser: self, f }
@@ -148,13 +148,13 @@ pub struct AndThen<P, F> {
 impl<U, A, B, F> Parser<U> for AndThen<A, F> where
     A: Parser<U>,
     B: Parser<U>,
-    F: FnMut(A::Output) -> B
+    F: FnOnce(A::Output) -> B + Clone
 {
     type Output = B::Output;
 
     fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
         let o = self.parser.parse(state)?;
-        (self.f)(o).parse(state)
+        (self.f.clone())(o).parse(state)
     }
 }
 
