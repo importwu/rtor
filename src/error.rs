@@ -7,9 +7,9 @@ use std::{
 
 #[derive(Debug)]
 pub struct ParseError {
-    pos: Pos,
-    unexpect: Option<String>,
-    expect: Vec<String>
+    pub(crate) pos: Pos,
+    pub(crate) unexpect: Option<char>,
+    pub(crate) expect: Vec<String>
 }
 
 impl ParseError {
@@ -36,7 +36,11 @@ impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "parse error at line: {}, column: {}.", self.pos.line(), self.pos.column())?;
 
-        let unexpect = self.unexpect.as_deref().unwrap_or("<eof>");
+        // let unexpect = self.unexpect.as_deref().unwrap_or("<eof>");
+        let unexpect = self.unexpect.map(String::from);
+        let unexpect = unexpect.as_deref().unwrap_or("<eof>");
+        
+
 
         match self.expect.len() {
             0 => writeln!(f, "expect \"{}\", but found \"{}\".", "<unknow>", unexpect),

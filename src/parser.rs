@@ -175,3 +175,7 @@ impl<U, P> Parser<U> for Expect<P> where
         }
     }
 } 
+
+pub struct Iter<P> {
+    parser: P
+}

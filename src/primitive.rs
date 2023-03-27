@@ -12,7 +12,7 @@ pub fn satisfy<F, U>(mut f: F) -> impl Parser<U, Output = char> where
         match state.next() {
             None => Err(ParseError{pos, expect: vec![], unexpect: None}),
             Some(ch) if f(&ch) => Ok(ch),
-            Some(ch) => Err(ParseError{pos, expect: vec![], unexpect: Some(ch.into())})
+            Some(ch) => Err(ParseError{pos, expect: vec![], unexpect: Some(ch)})
         }
     }
 }
@@ -57,17 +57,12 @@ pub fn hex<U>() -> impl Parser<U, Output = char> {
     satisfy(char::is_ascii_hexdigit).expect("hex")
 }
 
-pub fn string<U>(string: &str) -> impl Parser<U, Output = String> + '_{
+pub fn string<U>(string: &str) -> impl Parser<U, Output = &str> + '_ {
     move |state: &mut State<U>| {
         for ch in string.chars() {
-            let pos = state.pos();
-            match state.next() {
-                None => return Err(ParseError{pos, expect: vec![ch.into()], unexpect: None}),
-                Some(t) if t == ch => continue,
-                Some(t) => return Err(ParseError{pos, expect: vec![ch.into()], unexpect: Some(t.into())})
-            }
+            char(ch).parse(state)?;
         }
-        return Ok(string.to_owned())
+        return Ok(string)
     }
 }
 
@@ -91,7 +86,7 @@ pub fn eof<U>() -> impl Parser<U, Output = ()> {
         let pos = state.pos();
         match state.next() {
             None => Ok(()),
-            Some(t) => Err(ParseError { pos, expect: vec!["<eof>".into()], unexpect: Some(t.into()) })
+            Some(t) => Err(ParseError { pos, expect: vec!["<eof>".into()], unexpect: Some(t) })
         }
     }
 }
@@ -117,5 +112,7 @@ mod test {
 
         println!("{:?}", a.parse(&mut state));
         println!("{:?}", state);
+
+        
     }
 }
