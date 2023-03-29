@@ -1,15 +1,10 @@
-use crate::{
-    Parser,
-    State,
-    ParseError
-};
-
-pub fn satisfy<F, U>(mut f: F) -> impl Parser<U, Output = char> where 
+pub fn satisfy<F, I>(mut f: F) -> impl Parser<I, Output = char> where
+    I: Input<Item = char>,
     F: FnMut(&char) -> bool 
 {
-    move |state: &mut State<U>| {
-        let pos = state.pos();
-        match state.next() {
+    move |input: &mut I| {
+        let pos = input.pos();
+        match input.next() {
             None => Err(ParseError{pos, expect: vec![], unexpect: None}),
             Some(ch) if f(&ch) => Ok(ch),
             Some(ch) => Err(ParseError{pos, expect: vec![], unexpect: Some(ch)})
@@ -18,73 +13,99 @@ pub fn satisfy<F, U>(mut f: F) -> impl Parser<U, Output = char> where
 }
 
 #[inline]
-pub fn char<U>(ch: char) -> impl Parser<U, Output = char> {
+pub fn char<I>(ch: char) -> impl Parser<I, Output = char> where
+    I: Input<Item = char>
+{
     satisfy(move |t| *t == ch).expect(&ch.to_string())
 }
 
 #[inline]
-pub fn digit<U>() -> impl Parser<U, Output = char> {
+pub fn digit<I>() -> impl Parser<I, Output = char> where
+    I: Input<Item = char>
+{
     satisfy(char::is_ascii_digit).expect("digit")
 }
 
 #[inline]
-pub fn alpha<U>() -> impl Parser<U, Output = char> {
+pub fn alpha<I>() -> impl Parser<I, Output = char> where
+    I: Input<Item = char>
+{
     satisfy(char::is_ascii_alphabetic).expect("alpha")
 }
 
 #[inline]
-pub fn lowercase<U>() -> impl Parser<U, Output = char> {
+pub fn lowercase<I>() -> impl Parser<I, Output = char> where
+    I: Input<Item = char>
+{
     satisfy(char::is_ascii_lowercase).expect("lowercase")
 }
 
 #[inline]
-pub fn uppercase<U>() -> impl Parser<U, Output = char> {
+pub fn uppercase<I>() -> impl Parser<I, Output = char> where
+    I: Input<Item = char>
+{
     satisfy(char::is_ascii_uppercase).expect("uppercase")
 }
 
 #[inline]
-pub fn alphanum<U>() -> impl Parser<U, Output = char> {
+pub fn alphanum<I>() -> impl Parser<I, Output = char> where
+    I: Input<Item = char>
+{
     satisfy(char::is_ascii_alphanumeric).expect("alphanum")
 }
 
 #[inline]
-pub fn space<U>() -> impl Parser<U, Output = char> {
+pub fn space<I>() -> impl Parser<I, Output = char> where
+    I: Input<Item = char>
+{
     satisfy(char::is_ascii_whitespace).expect("space")
 }
 
 #[inline]
-pub fn hex<U>() -> impl Parser<U, Output = char> {
+pub fn hex<I>() -> impl Parser<I, Output = char> where
+    I: Input<Item = char>
+{
     satisfy(char::is_ascii_hexdigit).expect("hex")
 }
 
-pub fn string<U>(string: &str) -> impl Parser<U, Output = &str> + '_ {
-    move |state: &mut State<U>| {
+pub fn string<I>(string: &str) -> impl Parser<I, Output = &str> + '_ where
+    I: Input<Item = char>
+{
+    move |input: &mut I| {
         for ch in string.chars() {
-            char(ch).parse(state)?;
+            char(ch).parse(input)?;
         }
         return Ok(string)
     }
 }
 
 #[inline]
-pub fn oneof<'a, U: 'a>(string: &'a str) -> impl Parser<U, Output = char> + 'a {
+pub fn oneof<'a, I: 'a>(string: &'a str) -> impl Parser<I, Output = char> + 'a where
+    I: Input<Item = char>
+{
     satisfy(|t| string.find(*t).is_some()).expect(&format!("oneof {}", string))
 }
 
 #[inline]
-pub fn noneof<'a, U: 'a>(string: &'a str) -> impl Parser<U, Output = char> + 'a {
+pub fn noneof<'a, I: 'a>(string: &'a str) -> impl Parser<I, Output = char> + 'a where
+    I: Input<Item = char>
+{
     satisfy(|t| string.find(*t).is_none()).expect(&format!("noneof {}", string))
 }
 
 #[inline]
-pub fn anychar<U>() -> impl Parser<U, Output = char> {
+pub fn anychar<I>() -> impl Parser<I, Output = char> where
+    I: Input<Item = char>
+{
     satisfy(|_| true).expect("anychar")
 }
 
-pub fn eof<U>() -> impl Parser<U, Output = ()> {
-    |state: &mut State<U>| {
-        let pos = state.pos();
-        match state.next() {
+pub fn eof<I>() -> impl Parser<I, Output = ()> where
+    I: Input<Item = char>
+{
+    |input: &mut I| {
+        let pos = input.pos();
+        match input.next() {
             None => Ok(()),
             Some(t) => Err(ParseError { pos, expect: vec!["<eof>".into()], unexpect: Some(t) })
         }

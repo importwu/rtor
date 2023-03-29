@@ -1,19 +1,16 @@
 mod parser;
 
-mod state;
-
 mod error;
 
-mod pos;
-
-pub mod primitive;
+mod input;
 
 pub mod combine;
+
+pub mod char;
 
 pub use self::{
     error::ParseError,
     parser::Parser,
-    state::State,
-    pos::Pos
+    input::Input
 };
 
