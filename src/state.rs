@@ -4,19 +4,17 @@ use crate::Pos;
 
 
 #[derive(Debug)]
-pub struct State<'a, U> {
+pub struct State<'a> {
     inner: Chars<'a>,
     pos: Pos,
-    pub udata: U
 }
 
-impl<'a, U> State<'a, U> {
+impl<'a> State<'a> {
 
-    pub fn with_udata(str: &'a str, udata: U) -> Self {
+    pub fn new(str: &'a str) -> Self {
         Self { 
             inner: str.chars(), 
-            pos: Pos::new(), 
-            udata
+            pos: Pos::new()
         }
     }
 
@@ -31,26 +29,18 @@ impl<'a, U> State<'a, U> {
     }
 }
 
-impl<'a> State<'a, ()> {
 
-    pub fn new(str: &'a str) -> Self {
-        Self::with_udata(str, ())
-    }
-}
-
-
-impl<'a, U: Clone> Clone for State<'a, U> {
+impl<'a> Clone for State<'a> {
 
     fn clone(&self) -> Self {
         Self { 
             inner: self.inner.clone(), 
-            pos: self.pos, 
-            udata: self.udata.clone() 
+            pos: self.pos
         }
     }
 }
 
-impl<'a, U> Iterator for State<'a, U> {
+impl<'a> Iterator for State<'a> {
 
     type Item = char;
 

@@ -4,10 +4,10 @@ use crate::{
     ParseError
 };
 
-pub fn satisfy<F, U>(mut f: F) -> impl Parser<U, Output = char> where 
+pub fn satisfy<F>(mut f: F) -> impl Parser<Output = char> where 
     F: FnMut(&char) -> bool 
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         let pos = state.pos();
         match state.next() {
             None => Err(ParseError{pos, expect: vec![], unexpect: None}),
@@ -18,47 +18,47 @@ pub fn satisfy<F, U>(mut f: F) -> impl Parser<U, Output = char> where
 }
 
 #[inline]
-pub fn char<U>(ch: char) -> impl Parser<U, Output = char> {
+pub fn char(ch: char) -> impl Parser<Output = char> {
     satisfy(move |t| *t == ch).expect(&ch.to_string())
 }
 
 #[inline]
-pub fn digit<U>() -> impl Parser<U, Output = char> {
+pub fn digit() -> impl Parser<Output = char> {
     satisfy(char::is_ascii_digit).expect("digit")
 }
 
 #[inline]
-pub fn alpha<U>() -> impl Parser<U, Output = char> {
+pub fn alpha() -> impl Parser<Output = char> {
     satisfy(char::is_ascii_alphabetic).expect("alpha")
 }
 
 #[inline]
-pub fn lowercase<U>() -> impl Parser<U, Output = char> {
+pub fn lowercase() -> impl Parser<Output = char> {
     satisfy(char::is_ascii_lowercase).expect("lowercase")
 }
 
 #[inline]
-pub fn uppercase<U>() -> impl Parser<U, Output = char> {
+pub fn uppercase() -> impl Parser<Output = char> {
     satisfy(char::is_ascii_uppercase).expect("uppercase")
 }
 
 #[inline]
-pub fn alphanum<U>() -> impl Parser<U, Output = char> {
+pub fn alphanum() -> impl Parser<Output = char> {
     satisfy(char::is_ascii_alphanumeric).expect("alphanum")
 }
 
 #[inline]
-pub fn space<U>() -> impl Parser<U, Output = char> {
+pub fn space() -> impl Parser<Output = char> {
     satisfy(char::is_ascii_whitespace).expect("space")
 }
 
 #[inline]
-pub fn hex<U>() -> impl Parser<U, Output = char> {
+pub fn hex() -> impl Parser<Output = char> {
     satisfy(char::is_ascii_hexdigit).expect("hex")
 }
 
-pub fn string<U>(string: &str) -> impl Parser<U, Output = &str> + '_ {
-    move |state: &mut State<U>| {
+pub fn string(string: &str) -> impl Parser<Output = &str> {
+    move |state: &mut State| {
         for ch in string.chars() {
             char(ch).parse(state)?;
         }
@@ -67,22 +67,22 @@ pub fn string<U>(string: &str) -> impl Parser<U, Output = &str> + '_ {
 }
 
 #[inline]
-pub fn oneof<'a, U: 'a>(string: &'a str) -> impl Parser<U, Output = char> + 'a {
+pub fn oneof<'a>(string: &'a str) -> impl Parser<Output = char> + 'a {
     satisfy(|t| string.find(*t).is_some()).expect(&format!("oneof {}", string))
 }
 
 #[inline]
-pub fn noneof<'a, U: 'a>(string: &'a str) -> impl Parser<U, Output = char> + 'a {
+pub fn noneof<'a>(string: &'a str) -> impl Parser<Output = char> + 'a {
     satisfy(|t| string.find(*t).is_none()).expect(&format!("noneof {}", string))
 }
 
 #[inline]
-pub fn anychar<U>() -> impl Parser<U, Output = char> {
+pub fn anychar() -> impl Parser<Output = char> {
     satisfy(|_| true).expect("anychar")
 }
 
-pub fn eof<U>() -> impl Parser<U, Output = ()> {
-    |state: &mut State<U>| {
+pub fn eof<U>() -> impl Parser<Output = ()> {
+    |state: &mut State| {
         let pos = state.pos();
         match state.next() {
             None => Ok(()),
@@ -112,7 +112,7 @@ mod test {
 
         println!("{:?}", a.parse(&mut state));
         println!("{:?}", state);
-
         
+
     }
 }

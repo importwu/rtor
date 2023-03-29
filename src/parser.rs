@@ -5,11 +5,11 @@ use crate::{
 
 type ParseResult<O> = Result<O, ParseError>;
 
-pub trait Parser<U> {
+pub trait Parser {
 
     type Output;
 
-    fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output>;
+    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output>;
 
     fn map<F, R>(self, f: F) -> Map<Self, F> where 
         F: FnMut(Self::Output) -> R,
@@ -26,21 +26,21 @@ pub trait Parser<U> {
     }
 
     fn or<P>(self, bparser: P) -> Or<Self, P> where
-        P: Parser<U, Output = Self::Output>,
+        P: Parser<Output = Self::Output>,
         Self: Sized
     {
         Or { aparser: self, bparser }
     }
 
     fn and<P>(self, bparser: P) -> And<Self, P> where
-        P: Parser<U>,
+        P: Parser,
         Self: Sized
     {
         And { aparser: self, bparser }
     }
 
     fn and_then<F, P>(self, f: F) -> AndThen<Self, F> where
-        P: Parser<U>,
+        P: Parser,
         F: FnOnce(Self::Output) -> P + Clone,
         Self: Sized
     {
@@ -54,12 +54,12 @@ pub trait Parser<U> {
     }
 }
 
-impl<F, U, O> Parser<U> for F where 
-    F: FnMut(&mut State<U>) -> ParseResult<O>,
+impl<F, O> Parser for F where 
+    F: FnMut(&mut State) -> ParseResult<O>,
 {
     type Output = O;
 
-    fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
+    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
         (self)(state)
     }
 }
@@ -69,13 +69,13 @@ pub struct Map<P, F> {
     f: F
 }
 
-impl<U, P, F, R> Parser<U> for Map<P, F> where 
-    P: Parser<U>,
+impl<P, F, R> Parser for Map<P, F> where 
+    P: Parser,
     F: FnMut(P::Output) -> R
 {
     type Output = R;
 
-    fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
+    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
         let o = self.parser.parse(state)?;
         Ok((self.f)(o))
     }
@@ -86,13 +86,13 @@ pub struct MapErr<P, F> {
     f: F
 }
 
-impl<U, P, F> Parser<U> for MapErr<P, F> where 
-    P: Parser<U>,
+impl<P, F> Parser for MapErr<P, F> where 
+    P: Parser,
     F: FnMut(ParseError) -> ParseError
 {
     type Output = P::Output;
 
-    fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
+    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
         match self.parser.parse(state) {
             Ok(t) => Ok(t),
             Err(e) => Err((self.f)(e))
@@ -105,14 +105,13 @@ pub struct Or<A, B> {
     bparser: B
 }
 
-impl<U, A, B> Parser<U> for Or<A, B> where
-    U: Clone,
-    A: Parser<U>,
-    B: Parser<U, Output = A::Output>
+impl<A, B> Parser for Or<A, B> where
+    A: Parser,
+    B: Parser<Output = A::Output>
 {
     type Output = A::Output;
 
-    fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
+    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
         match self.aparser.parse(&mut state.clone()) {
             Ok(t) => Ok(t),
             Err(e1) => match self.bparser.parse(state) {
@@ -128,13 +127,13 @@ pub struct And<A, B> {
     bparser: B
 }
 
-impl<U, A, B> Parser<U> for And<A, B> where
-    A: Parser<U>,
-    B: Parser<U>
+impl<A, B> Parser for And<A, B> where
+    A: Parser,
+    B: Parser
 {
     type Output = B::Output;
 
-    fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
+    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
         self.aparser.parse(state)?;
         self.bparser.parse(state)
     }
@@ -145,14 +144,14 @@ pub struct AndThen<P, F> {
     f: F
 }
 
-impl<U, A, B, F> Parser<U> for AndThen<A, F> where
-    A: Parser<U>,
-    B: Parser<U>,
+impl<A, B, F> Parser for AndThen<A, F> where
+    A: Parser,
+    B: Parser,
     F: FnOnce(A::Output) -> B + Clone
 {
     type Output = B::Output;
 
-    fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
+    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
         let o = self.parser.parse(state)?;
         (self.f.clone())(o).parse(state)
     }
@@ -163,12 +162,12 @@ pub struct Expect<P> {
     pub(crate) parser: P
 }
 
-impl<U, P> Parser<U> for Expect<P> where 
-    P: Parser<U>
+impl<P> Parser for Expect<P> where 
+    P: Parser
 {
     type Output = P::Output;
 
-    fn parse(&mut self, state: &mut State<U>) -> ParseResult<Self::Output> {
+    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
         match self.parser.parse(state) {
             Ok(t) => Ok(t),
             Err(e) => Err(ParseError { pos: e.pos, unexpect: e.unexpect, expect: vec![self.msg.clone()] })

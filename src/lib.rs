@@ -6,6 +6,8 @@ mod error;
 
 mod pos;
 
+mod iter;
+
 pub mod primitive;
 
 pub mod combine;

@@ -4,11 +4,10 @@ use crate::{
 };
 
 
-pub fn opt<U, P>(mut parser: P) -> impl Parser<U, Output = Option<P::Output>> where 
-    U: Clone,
-    P: Parser<U>
+pub fn opt<P>(mut parser: P) -> impl Parser<Output = Option<P::Output>> where 
+    P: Parser
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         let mut state_cloned = state.clone();
 
         match parser.parse(&mut state_cloned) {
@@ -21,12 +20,11 @@ pub fn opt<U, P>(mut parser: P) -> impl Parser<U, Output = Option<P::Output>> wh
     }
 }
 
-pub fn opt_or<U, P>(mut parser: P, default: P::Output) -> impl Parser<U, Output = P::Output> where 
-    U: Clone,
-    P: Parser<U>,
+pub fn opt_or<P>(mut parser: P, default: P::Output) -> impl Parser<Output = P::Output> where 
+    P: Parser,
     P::Output: Clone
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         let mut state_cloned = state.clone();
 
         match parser.parse(&mut state_cloned) {
@@ -39,12 +37,12 @@ pub fn opt_or<U, P>(mut parser: P, default: P::Output) -> impl Parser<U, Output 
     }
 }
 
-pub fn between<U, L, M, R>(mut lparser: L, mut mparser: M, mut rparser: R) -> impl Parser<U, Output = M::Output> where 
-    L: Parser<U>,
-    M: Parser<U>,
-    R: Parser<U>
+pub fn between<L, M, R>(mut lparser: L, mut mparser: M, mut rparser: R) -> impl Parser<Output = M::Output> where 
+    L: Parser,
+    M: Parser,
+    R: Parser
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
 
         let _ = lparser.parse(state)?;
         let res= mparser.parse(state)?;
@@ -54,12 +52,12 @@ pub fn between<U, L, M, R>(mut lparser: L, mut mparser: M, mut rparser: R) -> im
     }
 }
 
-pub fn pair<U, L, M, R>(mut lparser: L, mut mparser: M, mut rparser: R) ->  impl Parser<U, Output = (L::Output, R::Output)>
-    where L: Parser<U>,
-        M: Parser<U>,
-        R: Parser<U>
+pub fn pair<L, M, R>(mut lparser: L, mut mparser: M, mut rparser: R) ->  impl Parser<Output = (L::Output, R::Output)>
+    where L: Parser,
+        M: Parser,
+        R: Parser
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         let left = lparser.parse(state)?;
         mparser.parse(state)?;
         let right = rparser.parse(state)?;
@@ -68,11 +66,10 @@ pub fn pair<U, L, M, R>(mut lparser: L, mut mparser: M, mut rparser: R) ->  impl
 }
 
 
-pub fn many<U, P>(mut parser: P) -> impl Parser<U, Output = Vec<P::Output>> where
-    U: Clone,
-    P: Parser<U>
+pub fn many<P>(mut parser: P) -> impl Parser<Output = Vec<P::Output>> where
+    P: Parser
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         let mut res: Vec<P::Output> = vec![];
 
         loop {
@@ -91,11 +88,10 @@ pub fn many<U, P>(mut parser: P) -> impl Parser<U, Output = Vec<P::Output>> wher
     }
 }
 
-pub fn many1<U, P>(mut parser: P) -> impl Parser<U, Output = Vec<P::Output>> where
-    U: Clone,
-    P: Parser<U>
+pub fn many1<P>(mut parser: P) -> impl Parser<Output = Vec<P::Output>> where
+    P: Parser
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         let mut res: Vec<P::Output> = vec![];
 
         res.push(parser.parse(state)?);
@@ -117,11 +113,10 @@ pub fn many1<U, P>(mut parser: P) -> impl Parser<U, Output = Vec<P::Output>> whe
 }
 
 
-pub fn skip_many<U, P>(mut parser: P) -> impl Parser<U, Output = ()> where 
-    U: Clone,
-    P: Parser<U>  
+pub fn skip_many<P>(mut parser: P) -> impl Parser<Output = ()> where 
+    P: Parser
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         loop {
             let mut state_cloned = state.clone();
 
@@ -135,11 +130,10 @@ pub fn skip_many<U, P>(mut parser: P) -> impl Parser<U, Output = ()> where
     }
 }
 
-pub fn skip_many1<U, P>(mut parser: P) -> impl Parser<U, Output = ()> where 
-    U: Clone,
-    P: Parser<U>  
+pub fn skip_many1<P>(mut parser: P) -> impl Parser<Output = ()> where 
+    P: Parser  
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         parser.parse(state)?;
 
         loop {
@@ -157,12 +151,11 @@ pub fn skip_many1<U, P>(mut parser: P) -> impl Parser<U, Output = ()> where
 
 
 
-pub fn sepby<U, P, S>(mut parser: P, mut sep: S) -> impl Parser<U, Output = Vec<P::Output>> where
-        U: Clone,
-        P: Parser<U>, 
-        S: Parser<U> 
+pub fn sepby<P, S>(mut parser: P, mut sep: S) -> impl Parser<Output = Vec<P::Output>> where
+        P: Parser, 
+        S: Parser
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         let mut result = vec![];
 
         let mut state_cloned = state.clone();
@@ -195,12 +188,11 @@ pub fn sepby<U, P, S>(mut parser: P, mut sep: S) -> impl Parser<U, Output = Vec<
     }
 }
 
-pub fn sepby1<U, P, S>(mut parser: P, mut sep: S) -> impl Parser<U, Output = Vec<P::Output>> where
-        U: Clone,
-        P: Parser<U>, 
-        S: Parser<U> 
+pub fn sepby1<P, S>(mut parser: P, mut sep: S) -> impl Parser<Output = Vec<P::Output>> where
+        P: Parser, 
+        S: Parser 
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         let mut result = vec![];
        
         result.push(parser.parse(state)?);
@@ -226,10 +218,10 @@ pub fn sepby1<U, P, S>(mut parser: P, mut sep: S) -> impl Parser<U, Output = Vec
 }
 
 
-pub fn count<U, P>(mut parser: P, n: usize) -> impl Parser<U, Output = Vec<P::Output>> 
-    where P: Parser<U>
+pub fn count<P>(mut parser: P, n: usize) -> impl Parser<Output = Vec<P::Output>> 
+    where P: Parser
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         let mut result = vec![];
         for _ in 0..n {
             result.push(parser.parse(state)?);
@@ -238,17 +230,16 @@ pub fn count<U, P>(mut parser: P, n: usize) -> impl Parser<U, Output = Vec<P::Ou
     }
 }
 
-pub fn pure<U, T: Clone>(t: T) -> impl Parser<U, Output = T> {
-    move|_state: &mut State<U>| {
+pub fn pure<T: Clone>(t: T) -> impl Parser<Output = T> {
+    move|_state: &mut State| {
         Ok(t.clone())
     }
 }
 
-pub fn attempt<U, P>(mut parser: P) -> impl Parser<U, Output = P::Output> where
-    U: Clone,
-    P: Parser<U>
+pub fn attempt<P>(mut parser: P) -> impl Parser<Output = P::Output> where
+    P: Parser
 {
-    move |state: &mut State<U>| {
+    move |state: &mut State| {
         let mut state_cloned = state.clone();
         match parser.parse(&mut state_cloned) {
             Ok(t) => {
