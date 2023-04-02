@@ -226,8 +226,6 @@ where
 }
 
 
-
-
 mod test {
 
     use crate::primitive::{char, digit};
@@ -237,14 +235,13 @@ mod test {
     #[test]
     fn test() {
 
-        let mut p = sepby(digit(), char(','));
-        
-
-        let (o, i) = p.parse("1a2,3,a").unwrap();
-
-        println!("{:?}", o);
-
-        println!("{:?}", i);
+        let mut parser = between(
+            char('['), 
+            sepby(digit, char(',')), 
+            char(']')
+          );
+          
+        assert_eq!(parser.parse("[1,2,3,4,5,6]").unwrap(), (vec!['1','2','3','4','5','6'], ""));
 
     }
 }

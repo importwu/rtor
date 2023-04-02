@@ -67,74 +67,74 @@ where
 }
 
 #[inline]
-pub fn digit<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+pub fn digit<I>(input: I) -> Result<(I::Item, I), Error<I>> 
 where
     I: Input,
     I::Item: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_digit())
+    satisfy(|c: &I::Item| c.as_char().is_ascii_digit()).parse(input)
 }
 
 #[inline]
-pub fn alpha<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+pub fn alpha<I>(input: I) -> Result<(I::Item, I), Error<I>> 
 where
     I: Input,
     I::Item: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_alphabetic())
+    satisfy(|c: &I::Item| c.as_char().is_ascii_alphabetic()).parse(input)
 }
 
 #[inline]
-pub fn lowercase<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>>  
+pub fn lowercase<I>(input: I) -> Result<(I::Item, I), Error<I>>  
 where
     I: Input,
     I::Item: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_lowercase())
+    satisfy(|c: &I::Item| c.as_char().is_ascii_lowercase()).parse(input)
 }
 
 #[inline]
-pub fn uppercase<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>>  
+pub fn uppercase<I>(input: I) -> Result<(I::Item, I), Error<I>>  
 where
     I: Input,
     I::Item: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_uppercase())
+    satisfy(|c: &I::Item| c.as_char().is_ascii_uppercase()).parse(input)
 }
 
 #[inline]
-pub fn alphanum<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>>  
+pub fn alphanum<I>(input: I) -> Result<(I::Item, I), Error<I>>   
 where
     I: Input,
     I::Item: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_alphanumeric())
+    satisfy(|c: &I::Item| c.as_char().is_ascii_alphanumeric()).parse(input)
 }
 
 #[inline]
-pub fn space<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>>  
+pub fn space<I>(input: I) -> Result<(I::Item, I), Error<I>>  
 where
     I: Input,
     I::Item: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_whitespace())
+    satisfy(|c: &I::Item| c.as_char().is_ascii_whitespace()).parse(input)
 }
 
 #[inline]
-pub fn hex<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>>
+pub fn hex<I>(input: I) -> Result<(I::Item, I), Error<I>> 
 where
     I: Input,
     I::Item: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_hexdigit())
+    satisfy(|c: &I::Item| c.as_char().is_ascii_hexdigit()).parse(input)
 }
 
 #[inline]
-pub fn anyitem<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+pub fn anyitem<I>(input: I) -> Result<(I::Item, I), Error<I>> 
 where
     I: Input
 {
-    satisfy(|_| true)
+    satisfy(|_| true).parse(input)
 }
 
 #[inline]
@@ -156,6 +156,7 @@ where
 }
 
 
+#[inline]
 pub fn eof<I>() -> impl Parser<I, Output = (), Error = Error<I>> 
 where
     I: Input
