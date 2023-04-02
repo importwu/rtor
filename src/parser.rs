@@ -1,66 +1,51 @@
-use crate::{
-    State, 
-    ParseError 
-};
+use crate::Input;
 
-type ParseResult<O> = Result<O, ParseError>;
-
-pub trait Parser {
-
+pub trait Parser<I: Input> {
     type Output;
+    type Error;
 
-    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output>;
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error>;
 
-    fn map<F, R>(self, f: F) -> Map<Self, F> where 
+    fn map<F, R>(self, f: F) -> Map<Self, F>
+    where 
         F: FnMut(Self::Output) -> R,
         Self: Sized
     {
         Map { parser: self, f }
     }
 
-    fn map_err<F, R>(self, f: F) -> MapErr<Self, F> where 
-        F: FnMut(ParseError) -> R,
-        Self: Sized
-    {
-        MapErr { parser: self, f }
-    }
-
-    fn or<P>(self, bparser: P) -> Or<Self, P> where
-        P: Parser<Output = Self::Output>,
+    fn or<P>(self, bparser: P) -> Or<Self, P> 
+    where
+        P: Parser<I>,
         Self: Sized
     {
         Or { aparser: self, bparser }
     }
 
-    fn and<P>(self, bparser: P) -> And<Self, P> where
-        P: Parser,
+    fn and<P>(self, bparser: P) -> And<Self, P> 
+    where
+        P: Parser<I>,
         Self: Sized
     {
         And { aparser: self, bparser }
     }
 
-    fn and_then<F, P>(self, f: F) -> AndThen<Self, F> where
-        P: Parser,
+    fn and_then<F, P>(self, f: F) -> AndThen<Self, F> 
+    where
+        P: Parser<I>,
         F: FnOnce(Self::Output) -> P + Clone,
         Self: Sized
     {
         AndThen { parser: self, f }
     }
-
-    fn expect(self, msg: &str) -> Expect<Self> where 
-        Self: Sized 
-    {
-        Expect { parser: self, msg: msg.to_owned() }
-    }
 }
 
-impl<F, O> Parser for F where 
-    F: FnMut(&mut State) -> ParseResult<O>,
-{
+impl<F, O, I: Input, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     type Output = O;
+    type Error = E;
 
-    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
-        (self)(state)
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        (self)(input)
     }
 }
 
@@ -69,34 +54,19 @@ pub struct Map<P, F> {
     f: F
 }
 
-impl<P, F, R> Parser for Map<P, F> where 
-    P: Parser,
+
+impl<I, P, F, R> Parser<I> for Map<P, F> 
+where
+    I: Input,
+    P: Parser<I>,
     F: FnMut(P::Output) -> R
 {
     type Output = R;
+    type Error = P::Error;
 
-    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
-        let o = self.parser.parse(state)?;
-        Ok((self.f)(o))
-    }
-}
-
-pub struct MapErr<P, F> {
-    parser: P,
-    f: F
-}
-
-impl<P, F> Parser for MapErr<P, F> where 
-    P: Parser,
-    F: FnMut(ParseError) -> ParseError
-{
-    type Output = P::Output;
-
-    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
-        match self.parser.parse(state) {
-            Ok(t) => Ok(t),
-            Err(e) => Err((self.f)(e))
-        }
+    fn parse(&mut self, input: I) ->  Result<(Self::Output, I), Self::Error> {
+        let (o, i) = self.parser.parse(input)?;
+        Ok(((self.f)(o), i))
     }
 }
 
@@ -105,18 +75,21 @@ pub struct Or<A, B> {
     bparser: B
 }
 
-impl<A, B> Parser for Or<A, B> where
-    A: Parser,
-    B: Parser<Output = A::Output>
+impl<I, A, B> Parser<I> for Or<A, B> 
+where
+    I: Input,
+    A: Parser<I>,
+    B: Parser<I, Output = A::Output, Error = A::Error>
 {
     type Output = A::Output;
+    type Error = A::Error;
 
-    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
-        match self.aparser.parse(&mut state.clone()) {
-            Ok(t) => Ok(t),
-            Err(e1) => match self.bparser.parse(state) {
-                Ok(t) => Ok(t),
-                Err(e2) => Err(e1.merge(e2))
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        match self.aparser.parse(input.clone()) {
+            Ok((o, i)) => Ok((o, i)),
+            Err(_) => match self.bparser.parse(input) {
+                Ok((o, i)) => Ok((o, i)),
+                Err(e) => Err(e)
             }
         }
     }
@@ -127,15 +100,18 @@ pub struct And<A, B> {
     bparser: B
 }
 
-impl<A, B> Parser for And<A, B> where
-    A: Parser,
-    B: Parser
+impl<I, A, B> Parser<I> for And<A, B> 
+where
+    I: Input,
+    A: Parser<I>,
+    B: Parser<I, Error = A::Error>
 {
     type Output = B::Output;
+    type Error = B::Error;
 
-    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
-        self.aparser.parse(state)?;
-        self.bparser.parse(state)
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (_, i) = self.aparser.parse(input)?;
+        self.bparser.parse(i)
     }
 }
 
@@ -144,37 +120,36 @@ pub struct AndThen<P, F> {
     f: F
 }
 
-impl<A, B, F> Parser for AndThen<A, F> where
-    A: Parser,
-    B: Parser,
+impl<I, A, B, F> Parser<I> for AndThen<A, F> 
+where
+    I: Input,
+    A: Parser<I>,
+    B: Parser<I, Error = A::Error>,
     F: FnOnce(A::Output) -> B + Clone
 {
     type Output = B::Output;
+    type Error = B::Error;
 
-    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
-        let o = self.parser.parse(state)?;
-        (self.f.clone())(o).parse(state)
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (o, i) = self.parser.parse(input)?;
+        (self.f.clone())(o).parse(i)
     }
 }
 
-pub struct Expect<P> {
-    pub(crate) msg: String,
-    pub(crate) parser: P
-}
+mod test {
 
-impl<P> Parser for Expect<P> where 
-    P: Parser
-{
-    type Output = P::Output;
 
-    fn parse(&mut self, state: &mut State) -> ParseResult<Self::Output> {
-        match self.parser.parse(state) {
-            Ok(t) => Ok(t),
-            Err(e) => Err(ParseError { pos: e.pos, unexpect: e.unexpect, expect: vec![self.msg.clone()] })
-        }
+    use crate::primitive::char;
+
+    use super::*;
+
+    #[test]
+    fn test() {
+        let p = char('a')
+            .or(char('b'))
+            .or(char('c'))
+            .parse("bsd");
+
+        println!("{:?}", p)
     }
-} 
-
-pub struct Iter<P> {
-    parser: P
 }

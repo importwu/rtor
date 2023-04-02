@@ -1,118 +1,185 @@
 use crate::{
-    Parser,
-    State,
-    ParseError
+    Input, 
+    Parser, 
+    Error, 
+    AsChar,
+    FindItem
 };
 
-pub fn satisfy<F>(mut f: F) -> impl Parser<Output = char> where 
-    F: FnMut(&char) -> bool 
+#[inline]
+pub fn char<I>(ch: char) -> impl Parser<I, Output = char, Error = Error<I>> 
+where
+    I: Input<Item = char>
 {
-    move |state: &mut State| {
-        let pos = state.pos();
-        match state.next() {
-            None => Err(ParseError{pos, expect: vec![], unexpect: None}),
-            Some(ch) if f(&ch) => Ok(ch),
-            Some(ch) => Err(ParseError{pos, expect: vec![], unexpect: Some(ch)})
-        }
-    }
+    satisfy(move |t| *t == ch)
 }
 
-#[inline]
-pub fn char(ch: char) -> impl Parser<Output = char> {
-    satisfy(move |t| *t == ch).expect(&ch.to_string())
-}
-
-#[inline]
-pub fn digit() -> impl Parser<Output = char> {
-    satisfy(char::is_ascii_digit).expect("digit")
-}
-
-#[inline]
-pub fn alpha() -> impl Parser<Output = char> {
-    satisfy(char::is_ascii_alphabetic).expect("alpha")
-}
-
-#[inline]
-pub fn lowercase() -> impl Parser<Output = char> {
-    satisfy(char::is_ascii_lowercase).expect("lowercase")
-}
-
-#[inline]
-pub fn uppercase() -> impl Parser<Output = char> {
-    satisfy(char::is_ascii_uppercase).expect("uppercase")
-}
-
-#[inline]
-pub fn alphanum() -> impl Parser<Output = char> {
-    satisfy(char::is_ascii_alphanumeric).expect("alphanum")
-}
-
-#[inline]
-pub fn space() -> impl Parser<Output = char> {
-    satisfy(char::is_ascii_whitespace).expect("space")
-}
-
-#[inline]
-pub fn hex() -> impl Parser<Output = char> {
-    satisfy(char::is_ascii_hexdigit).expect("hex")
-}
-
-pub fn string(string: &str) -> impl Parser<Output = &str> {
-    move |state: &mut State| {
+pub fn string<I>(string: &str) -> impl Parser<I, Output = &str, Error = Error<I>> + '_ 
+where
+    I: Input<Item = char>
+{
+    move |mut input: I| {
         for ch in string.chars() {
-            char(ch).parse(state)?;
+            let (_, i) = char(ch).parse(input)?;
+            input = i;
         }
-        return Ok(string)
+        return Ok((string, input))
     }
 }
 
 #[inline]
-pub fn oneof<'a>(string: &'a str) -> impl Parser<Output = char> + 'a {
-    satisfy(|t| string.find(*t).is_some()).expect(&format!("oneof {}", string))
+pub fn item<I>(item: I::Item) -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+where
+    I: Input,
+    I::Item: PartialEq
+{
+    satisfy(move |t| *t == item)
 }
 
 #[inline]
-pub fn noneof<'a>(string: &'a str) -> impl Parser<Output = char> + 'a {
-    satisfy(|t| string.find(*t).is_none()).expect(&format!("noneof {}", string))
+pub fn items<I>(items: &[I::Item]) -> impl Parser<I, Output = &[I::Item], Error = Error<I>> 
+where
+    I: Input,
+    I::Item: PartialEq
+{
+    move |mut input: I| {
+        for i in items {
+            let (_, i) = item(*i).parse(input)?;
+            input = i;
+        }
+        return Ok((items, input))
+    }
+}
+
+
+pub fn satisfy<I, F>(mut pred: F) -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+where
+    I: Input,
+    F: FnMut(&I::Item) -> bool
+{
+    move |mut input: I| {
+        match input.next() {
+            Some(t) if pred(&t) => Ok((t, input)),
+            Some(t) => Err(Error::Unexpected(t)),
+            None => Err(Error::Eoi)
+        }
+    }
 }
 
 #[inline]
-pub fn anychar() -> impl Parser<Output = char> {
-    satisfy(|_| true).expect("anychar")
+pub fn digit<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+where
+    I: Input,
+    I::Item: AsChar
+{
+    satisfy(|c: &I::Item| c.as_char().is_ascii_digit())
 }
 
-pub fn eof<U>() -> impl Parser<Output = ()> {
-    |state: &mut State| {
-        let pos = state.pos();
-        match state.next() {
-            None => Ok(()),
-            Some(t) => Err(ParseError { pos, expect: vec!["<eof>".into()], unexpect: Some(t) })
+#[inline]
+pub fn alpha<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+where
+    I: Input,
+    I::Item: AsChar
+{
+    satisfy(|c: &I::Item| c.as_char().is_ascii_alphabetic())
+}
+
+#[inline]
+pub fn lowercase<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>>  
+where
+    I: Input,
+    I::Item: AsChar
+{
+    satisfy(|c: &I::Item| c.as_char().is_ascii_lowercase())
+}
+
+#[inline]
+pub fn uppercase<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>>  
+where
+    I: Input,
+    I::Item: AsChar
+{
+    satisfy(|c: &I::Item| c.as_char().is_ascii_uppercase())
+}
+
+#[inline]
+pub fn alphanum<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>>  
+where
+    I: Input,
+    I::Item: AsChar
+{
+    satisfy(|c: &I::Item| c.as_char().is_ascii_alphanumeric())
+}
+
+#[inline]
+pub fn space<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>>  
+where
+    I: Input,
+    I::Item: AsChar
+{
+    satisfy(|c: &I::Item| c.as_char().is_ascii_whitespace())
+}
+
+#[inline]
+pub fn hex<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>>
+where
+    I: Input,
+    I::Item: AsChar
+{
+    satisfy(|c: &I::Item| c.as_char().is_ascii_hexdigit())
+}
+
+#[inline]
+pub fn anyitem<I>() -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+where
+    I: Input
+{
+    satisfy(|_| true)
+}
+
+#[inline]
+pub fn oneof<I, F>(items: F) -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+where
+    I: Input,
+    F: FindItem<I::Item>
+{
+    satisfy(move|t| items.find_item(*t))
+}
+
+#[inline]
+pub fn noneof<I, F>(items: F) -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+where
+    I: Input,
+    F: FindItem<I::Item>
+{
+    satisfy(move|t| !items.find_item(*t))
+}
+
+
+pub fn eof<I>() -> impl Parser<I, Output = (), Error = Error<I>> 
+where
+    I: Input
+{
+    |mut input: I| {
+        match input.next() {
+            None => Ok(((), input)),
+            Some(t) => Err(Error::Unexpected(t))
         }
     }
 }
 
 mod test {
 
-    use crate::combine::{pure, opt_or};
-
     use super::*;
 
     #[test]
     fn test() {
-        let mut state = State::new("abc");
+        let a = b"abc";
+        let b = b"12";
 
-        let mut a = string("a")
-            .and_then(|x| {
-                string("b").and_then(move |y| {
-                    string("c").and_then(move|z| {
-                        pure((x, y, z))
-                    })
-                })
-            });
+        let p = items(b"12").parse(&b"1234"[..]);
 
-        println!("{:?}", a.parse(&mut state));
-        println!("{:?}", state);
-        
+        println!("{:?}", p);
 
     }
 }
