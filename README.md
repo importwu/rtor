@@ -17,7 +17,6 @@ use rtor::{
 };
 
 fn main() {
-    let mut state = State::new("[1,2,3,4,5,6]");
     
     let mut parser = between(
       char('['), 
@@ -25,6 +24,6 @@ fn main() {
       char(']')
     );
     
-    assert_eq!(parser.parse(&mut state), Ok(vec![1,2,3,4,5,6]));
+    assert_eq!(parser.parse("[1,2,3,4,5,6]"), Ok(vec![1,2,3,4,5,6]));
 }
 ```
