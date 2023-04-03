@@ -58,7 +58,7 @@ where
     F: FnMut(&I::Item) -> bool
 {
     move |mut input: I| {
-        match input.next() {
+        match input.consume() {
             Some(t) if pred(&t) => Ok((t, input)),
             Some(t) => Err(Error::Unexpected(t)),
             None => Err(Error::Eoi)
@@ -162,12 +162,26 @@ where
     I: Input
 {
     |mut input: I| {
-        match input.next() {
+        match input.consume() {
             None => Ok(((), input)),
             Some(t) => Err(Error::Unexpected(t))
         }
     }
 }
+
+#[inline]
+pub fn token<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = P::Error> 
+where
+    I: Input,
+    I::Item: AsChar,
+    P: Parser<I>
+{
+    move |mut input: I| {
+        input.take_while(|t| t.as_char() == ' ');
+        parser.parse(input)
+    }
+}
+
 
 mod test {
 
@@ -178,7 +192,7 @@ mod test {
         let a = b"abc";
         let b = b"12";
 
-        let p = items(b"12").parse(&b"1234"[..]);
+        let p = token(items(b"12")).parse(&b"   1234"[..]);
 
         println!("{:?}", p);
 

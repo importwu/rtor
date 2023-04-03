@@ -1,19 +1,26 @@
+use core::slice;
+use std::str::Chars;
+use std::iter::Copied;
+
 pub trait Input: Clone {
     type Item: Copy;
+    type Items: Iterator<Item = Self::Item>;
 
-    fn next(&mut self) -> Option<Self::Item>;
+    fn consume(&mut self) -> Option<Self::Item>;
 
     fn take_while<F: FnMut(&Self::Item) -> bool>(&mut self, pred: F) -> Self;
 
-
+    fn items(&self) -> Self::Items;
 }
 
 impl<'a> Input for &'a str {
     type Item = char;
+    type Items = Chars<'a>;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        let ch = self.chars().next()?;
-        *self = &self[ch.len_utf8()..];
+    fn consume(&mut self) -> Option<Self::Item> {
+        let mut chars = self.chars();
+        let ch = chars.next()?;
+        *self = chars.as_str();
         Some(ch)
     }
 
@@ -22,7 +29,7 @@ impl<'a> Input for &'a str {
         let mut len = 0;
 
         loop {
-            match s.next() {
+            match s.consume() {
                 None => break,
                 Some(t) if pred(&t) => {
                     len += t.len_utf8();
@@ -39,12 +46,17 @@ impl<'a> Input for &'a str {
         r
     }
 
+    fn items(&self) -> Self::Items {
+        self.chars()
+    }
+
 }
 
 impl<'a, I> Input for &'a [I] where I: Copy{
     type Item = I;
+    type Items = Copied<slice::Iter<'a, Self::Item>>;
 
-    fn next(&mut self) -> Option<Self::Item> {
+    fn consume(&mut self) -> Option<Self::Item> {
         if self.len() == 0 {
             return None
         }
@@ -59,7 +71,7 @@ impl<'a, I> Input for &'a [I] where I: Copy{
         let mut len = 0;
 
         loop {
-            match b.next() {
+            match b.consume() {
                 None => break,
                 Some(t) if pred(&t) => {
                     len += 1;
@@ -75,23 +87,25 @@ impl<'a, I> Input for &'a [I] where I: Copy{
 
         r
     }
+
+    fn items(&self) -> Self::Items {
+        self.iter().copied()
+    }
 }
 
 
 
 mod test {
-    use crate::Input;
-
+    use super::*;
 
     #[test]
     fn test() {
-        let mut bs = &b"   123"[..];
+        let mut bs = "   abc";
 
-        bs.take_while(|x| *x == b' ');
+        let i = bs.take_while(|x| *x == ' ');
 
-        println!("{:?}", bs.next());
-        println!("{:?}", bs.next());
-        println!("{:?}", bs.next());
-        println!("{:?}", bs.next());
+        println!("{:?}", String::from_iter(i.items()));
+
+
     }
 }
