@@ -42,7 +42,7 @@ pub trait FindItem<T> {
 
 impl<'a> FindItem<char> for &'a str {
     fn find_item(&self, item: char) -> bool {
-        str::find(self, item).is_some()
+        self.chars().any(|x| x == item)
     }
 }
 
@@ -51,7 +51,7 @@ where
     I: PartialEq
 {
     fn find_item(&self, item: I) -> bool {
-        self.iter().find(|x| **x == item).is_some()
+        self.iter().any(|x| *x == item)
     }
 }
 
