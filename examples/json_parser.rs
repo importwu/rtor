@@ -1,83 +1,81 @@
 use std::collections::HashMap;
 use std::fs;
 
-// use rtor::chars::{string, sat, ParseResult, digit, char, eof, token, hex, oneof};
-// use rtor::combines::{ between, many, many1, sepby, pair, attempt, opt_or_default};
+use rtor::{
+    Input, 
+    Error, 
+    Parser, 
+    primitive::{
+        token, 
+        string,
+        char, take_while
+    }, 
+    combine::{between, sepby, pair}
+};
+
 fn main() {
 
     // let mut input = StreamInput::new(fs::File::open("./examples/json_example.json").unwrap());
 
-    // let mut input = StreamInput::new(std::io::stdin());
-
+    let json = r#"
+        1
+    "#;
     
-    
-    // loop {
-    //     let res = parse_json(&mut input);
-    //     println!("{:?}", res);
-    //     println!("{:?}", input.buf);
-    // }
+    let res = parse_json(json);
 
+    println!("{:?}", res)
 }
 
-// fn parse_json<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue>  {
-//     token(alt!(
-//         json_array,
-//         json_object,
-//         json_number,
-//         json_true,
-//         json_false,
-//         json_null,
-//         json_string
-//     )).parse(input)
-// }
+fn parse_json<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+    json_true
+        .or(json_false)
+        .or(json_null)
+        .or(json_array)
+        .or(json_object)
+    .parse(input)
+}
 
 
-// fn json_array<I>(input: &mut I) -> ParseResult<JsonValue> 
-//     where I: Input<Item = char>
-// {
-//     between(
-//         attempt(char('[')),
-//         sepby(parse_json, token(char(','))), 
-//         token(char(']'))
-//     )
-//     .map(JsonValue::Array)
-//     .parse(input)
-// }
+fn json_array<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+    between(
+        token(char('[')),
+        sepby(parse_json, token(char(','))), 
+        token(char(']'))
+    )
+    .map(JsonValue::Array)
+    .parse(input)
+}
 
-// fn json_object<I>(input: &mut I) -> ParseResult<JsonValue> 
-//     where I: Input<Item = char>
-// {
-//     between(
-//         attempt(char('{')), 
-//         sepby(
-//             pair(token(kstring), token(char(':')),  parse_json), 
-//             token(char(','))
-//         ), 
-//         token(char('}'))
-//     )
-//     .map(|kvs| JsonValue::Object(HashMap::from_iter(kvs)))
-//     .parse(input)
-// }
+fn json_object<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+    between(
+        token(char('{')), 
+        sepby(
+            pair(token(kstring), token(char(':')),  parse_json), 
+            token(char(','))
+        ), 
+        token(char('}'))
+    )
+    .map(|kvs| JsonValue::Object(HashMap::from_iter(kvs)))
+    .parse(input)
+}
 
-// fn json_null<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> {
-//     attempt(string("null"))
-//         .map(|_| JsonValue::Null)
-//         .parse(input)
-// }
+fn json_null<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+    token(string("null"))
+        .map(|_| JsonValue::Null)
+        .parse(input)
+}
 
-// fn json_true<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> {
-//     attempt(string("true"))
-//         .map(|_| JsonValue::Boolean(true))
-//         .parse(input)
+fn json_true<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+    token(string("true"))
+        .map(|_| JsonValue::Boolean(true))
+        .parse(input)
+}
 
-// }
-
-// fn json_false<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> {
-//     attempt(string("false"))
-//         .map(|_|JsonValue::Boolean(false))
-//         .parse(input)
-       
-// }
+fn json_false<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+    token(string("false"))
+        .map(|_| JsonValue::Boolean(false))
+        .parse(input)
+}
 
 // fn json_string<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> { 
 //     kstring
@@ -85,16 +83,15 @@ fn main() {
 //         .parse(input)
 // }
 
-// fn kstring<I: Input<Item = char>>(input: &mut I) -> ParseResult<String> {
-//     between(
-//         char('"'), 
-//         many(character),
-//         char('"')
-//     )
-//     .map(String::from_iter)
-//     .parse(input)
-    
-// }
+fn kstring<I: Input<Item = char>>(input: I) -> Result<(String, I), Error<I>> {
+    between(
+        char('"'), 
+        take_while(|x| *x != '"'),
+        char('"')
+    )
+    .map(|i: I| String::from_iter(i.items()))
+    .parse(input)
+}
 
 // fn character<I: Input<Item = char>>(input: &mut I) -> ParseResult<String> {
 //     alt!(

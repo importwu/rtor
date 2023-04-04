@@ -51,6 +51,17 @@ where
     }
 }
 
+#[inline]
+pub fn take_while<I, F>(mut pred: F) -> impl Parser<I, Output = I, Error = Error<I>> 
+where
+    I: Input,
+    F: FnMut(&I::Item) -> bool
+{
+    move |mut input: I| {
+        let o = input.take_while(&mut pred);
+        Ok((o, input))
+    }
+}
 
 pub fn satisfy<I, F>(mut pred: F) -> impl Parser<I, Output = I::Item, Error = Error<I>> 
 where
@@ -177,7 +188,7 @@ where
     P: Parser<I>
 {
     move |mut input: I| {
-        input.take_while(|t| t.as_char() == ' ');
+        input.take_while(|t| t.as_char().is_ascii_whitespace());
         parser.parse(input)
     }
 }
@@ -189,10 +200,8 @@ mod test {
 
     #[test]
     fn test() {
-        let a = b"abc";
-        let b = b"12";
 
-        let p = token(items(b"12")).parse(&b"   1234"[..]);
+        let p = item(b'a').parse(&b"aaaabc"[..]);
 
         println!("{:?}", p);
 

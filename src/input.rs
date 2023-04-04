@@ -8,7 +8,7 @@ pub trait Input: Clone {
 
     fn consume(&mut self) -> Option<Self::Item>;
 
-    fn take_while<F: FnMut(&Self::Item) -> bool>(&mut self, pred: F) -> Self;
+    fn take_while<F>(&mut self, pred: F) -> Self where F: FnMut(&Self::Item) -> bool;
 
     fn items(&self) -> Self::Items;
 }
@@ -24,7 +24,10 @@ impl<'a> Input for &'a str {
         Some(ch)
     }
 
-    fn take_while<F: FnMut(&Self::Item) -> bool>(&mut self, mut pred: F) -> Self {
+    fn take_while<F>(&mut self, mut pred: F) -> Self 
+    where
+        F: FnMut(&Self::Item) -> bool
+    {
         let mut s = *self;
         let mut len = 0;
 
@@ -66,7 +69,10 @@ impl<'a, I> Input for &'a [I] where I: Copy{
         Some(b)
     }
 
-    fn take_while<F: FnMut(&Self::Item) -> bool>(&mut self, mut pred: F) -> Self {
+    fn take_while<F>(&mut self, mut pred: F) -> Self 
+    where
+        F: FnMut(&Self::Item) -> bool
+    {
         let mut b = *self;
         let mut len = 0;
 
@@ -94,18 +100,13 @@ impl<'a, I> Input for &'a [I] where I: Copy{
 }
 
 
-
 mod test {
     use super::*;
 
     #[test]
     fn test() {
         let mut bs = "   abc";
-
         let i = bs.take_while(|x| *x == ' ');
-
         println!("{:?}", String::from_iter(i.items()));
-
-
     }
 }
