@@ -47,7 +47,6 @@ where
 }
 
 
-
 impl<I, P> Iter<I, P> {
     pub fn into_input(self) -> I {
         self.input

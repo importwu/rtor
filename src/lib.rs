@@ -17,6 +17,8 @@ pub use self::{
     input::Input
 };
 
+pub type ParseResult<O, I> = Result<(O, I), Error<<I as Input>::Item>>;
+
 pub trait AsChar {
     fn as_char(&self) -> char;
 }
@@ -60,6 +62,6 @@ where
     I: PartialEq
 {
     fn find_item(&self, item: I) -> bool {
-        self.iter().find(|x| **x == item).is_some()
+        self.iter().any(|x| *x == item)
     }
 }

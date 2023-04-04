@@ -228,7 +228,7 @@ where
 
 mod test {
 
-    use crate::primitive::{digit};
+    use crate::primitive::digit;
 
     use super::*;
 

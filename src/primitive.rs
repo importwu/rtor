@@ -3,51 +3,31 @@ use crate::{
     Parser, 
     Error, 
     AsChar,
-    FindItem
+    FindItem, 
+    ParseResult
 };
 
 #[inline]
-pub fn char<I>(ch: char) -> impl Parser<I, Output = char, Error = Error<I::Item>> 
-where
-    I: Input<Item = char>,
-{
-    satisfy(move |t| *t == ch)
-}
-
-pub fn string<I>(string: &str) -> impl Parser<I, Output = &str, Error = Error<I::Item>> + '_ 
-where
-    I: Input<Item = char>,
-{
-    move |mut input: I| {
-        for mut ch in string.chars() {
-            let (_, i) = ch.parse(input)?;
-            input = i;
-        }
-        return Ok((string, input))
-    }
-}
-
-#[inline]
-pub fn item<I>(item: I::Item) -> impl Parser<I, Output = I::Item, Error = Error<I::Item>> 
+pub fn char<I>(ch: char) -> impl Parser<I, Output = I::Item, Error = Error<I::Item>> 
 where
     I: Input,
-    I::Item: PartialEq
+    I::Item: AsChar
 {
-    satisfy(move |t| *t == item)
+    satisfy(move |t: &I::Item| t.as_char() == ch)
 }
 
-#[inline]
-pub fn items<I>(items: &[I::Item]) -> impl Parser<I, Output = &[I::Item], Error = Error<I::Item>> 
+pub fn string<I>(string: &str) -> impl Parser<I, Output = I, Error = Error<I::Item>> + '_ 
 where
     I: Input,
-    I::Item: PartialEq
+    I::Item: AsChar
 {
     move |mut input: I| {
-        for i in items {
-            let (_, i) = item(*i).parse(input)?;
+        let src = input.clone();
+        for ch in string.chars() {
+            let (_, i) = char(ch).parse(input)?;
             input = i;
         }
-        return Ok((items, input))
+        return Ok((src.diff(&input), input))
     }
 }
 
@@ -58,8 +38,21 @@ where
     F: FnMut(&I::Item) -> bool
 {
     move |mut input: I| {
-        let o = input.take_while(&mut pred);
-        Ok((o, input))
+        let src = input.clone();
+
+        loop {
+            let mut i = input.clone();
+            match i.next() {
+                None => break,
+                Some(t) if pred(&t) => {
+                    input = i;
+                    continue
+                },
+                Some(_) => break
+            }
+        }
+
+        Ok((src.diff(&input), input))
     }
 }
 
@@ -69,7 +62,7 @@ where
     F: FnMut(&I::Item) -> bool
 {
     move |mut input: I| {
-        match input.consume() {
+        match input.next() {
             Some(t) if pred(&t) => Ok((t, input)),
             Some(t) => Err(Error::Unexpected(t)),
             None => Err(Error::Eoi)
@@ -78,7 +71,7 @@ where
 }
 
 #[inline]
-pub fn digit<I>(input: I) -> Result<(I::Item, I), Error<I::Item>> 
+pub fn digit<I>(input: I) -> ParseResult<I::Item, I> 
 where
     I: Input,
     I::Item: AsChar
@@ -87,7 +80,7 @@ where
 }
 
 #[inline]
-pub fn alpha<I>(input: I) -> Result<(I::Item, I), Error<I::Item>> 
+pub fn alpha<I>(input: I) -> ParseResult<I::Item, I>
 where
     I: Input,
     I::Item: AsChar
@@ -96,7 +89,7 @@ where
 }
 
 #[inline]
-pub fn lowercase<I>(input: I) -> Result<(I::Item, I), Error<I::Item>>  
+pub fn lowercase<I>(input: I) -> ParseResult<I::Item, I>  
 where
     I: Input,
     I::Item: AsChar
@@ -105,7 +98,7 @@ where
 }
 
 #[inline]
-pub fn uppercase<I>(input: I) -> Result<(I::Item, I), Error<I::Item>>  
+pub fn uppercase<I>(input: I) -> ParseResult<I::Item, I>  
 where
     I: Input,
     I::Item: AsChar
@@ -114,7 +107,7 @@ where
 }
 
 #[inline]
-pub fn alphanum<I>(input: I) -> Result<(I::Item, I), Error<I::Item>>   
+pub fn alphanum<I>(input: I) -> ParseResult<I::Item, I>   
 where
     I: Input,
     I::Item: AsChar
@@ -123,7 +116,7 @@ where
 }
 
 #[inline]
-pub fn space<I>(input: I) -> Result<(I::Item, I), Error<I::Item>>  
+pub fn space<I>(input: I) -> ParseResult<I::Item, I>  
 where
     I: Input,
     I::Item: AsChar
@@ -132,7 +125,7 @@ where
 }
 
 #[inline]
-pub fn hex<I>(input: I) -> Result<(I::Item, I), Error<I::Item>> 
+pub fn hex<I>(input: I) -> ParseResult<I::Item, I> 
 where
     I: Input,
     I::Item: AsChar
@@ -141,9 +134,10 @@ where
 }
 
 #[inline]
-pub fn anyitem<I>(input: I) -> Result<(I::Item, I), Error<I::Item>> 
+pub fn anychar<I>(input: I) -> ParseResult<I::Item, I> 
 where
-    I: Input
+    I: Input,
+    I::Item: AsChar
 {
     satisfy(|_| true).parse(input)
 }
@@ -173,7 +167,7 @@ where
     I: Input
 {
     |mut input: I| {
-        match input.consume() {
+        match input.next() {
             None => Ok(((), input)),
             Some(t) => Err(Error::Unexpected(t))
         }
@@ -181,41 +175,31 @@ where
 }
 
 #[inline]
-pub fn token<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = P::Error> 
+pub fn token<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = Error<I::Item>> 
 where
     I: Input,
     I::Item: AsChar,
-    P: Parser<I>
+    P: Parser<I, Error = Error<I::Item>>
 {
-    move |mut input: I| {
-        input.take_while(|t| t.as_char().is_ascii_whitespace());
-        parser.parse(input)
+    move |input: I| {
+        let (_, i) = take_while(|t: &I::Item| t.as_char().is_ascii_whitespace()).parse(input)?;
+        parser.parse(i)
     }
 }
 
 impl<I> Parser<I> for char 
 where 
-    I: Input<Item = char> 
+    I: Input,
+    I::Item: AsChar
 {
-    type Output = char;
+    type Output = I::Item;
     type Error = Error<I::Item>;
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        satisfy(|t| *t == *self).parse(input)
+        satisfy(|t: &I::Item| t.as_char() == *self).parse(input)
     }
 }
 
-impl<I> Parser<I> for u8 
-where 
-    I: Input<Item = u8>,
-{
-    type Output = u8;
-    type Error = Error<I::Item>;
-
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        satisfy(|t| *t == *self).parse(input)
-    }
-}
 
 mod test {
 
@@ -225,11 +209,13 @@ mod test {
     fn test() {
 
         // let p = b'a'.parse(&b"aaaabc"[..]);
-        let p = b'a'.parse(&b"aaaabc"[..]);
+        // let p = b'a'.parse(&b"aaaabc"[..]);
         
         // let p ='a'.or('b').map(|x|x.to_uppercase()).parse("aab");
 
-        println!("{:?}", p);
+        // println!("{:?}", p);
+
+        println!("{:?}", string("ab").parse("abcd"))
 
     }
 }

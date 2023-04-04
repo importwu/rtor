@@ -1,6 +1,5 @@
 use std::fmt;
 
-use crate::Input;
 
 #[derive(Debug)]
 pub enum Error<T> {
