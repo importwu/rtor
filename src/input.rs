@@ -104,7 +104,7 @@ mod test {
 
         let i = bs.take_while(|x| *x == ' ');
 
-        println!("{:?}", String::from_iter(i.items()));
+        println!("{:?}", String::from_iter(bs.items()));
 
 
     }
