@@ -63,17 +63,9 @@ mod test {
     #[test]
     fn test() {
 
-        // let mut it = iterator("abc", alpha());
+        let mut it = iterator("abc", alpha);
 
-        // let mut it = iter("abc");
-
-        // iter("as");
-
-        
-        // println!("{:?}", it.collect::<Vec<_>>());
-        // println!("{:?}", iter.next());
-        // println!("{:?}", iter.next());
-        
+        println!("{:?}", it.collect::<Vec<_>>());
         
     }
 

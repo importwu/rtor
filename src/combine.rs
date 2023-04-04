@@ -228,7 +228,7 @@ where
 
 mod test {
 
-    use crate::primitive::{char, digit};
+    use crate::primitive::{digit};
 
     use super::*;
 
@@ -236,9 +236,9 @@ mod test {
     fn test() {
 
         let mut parser = between(
-            char('['), 
-            sepby(digit, char(',')), 
-            char(']')
+            '[', 
+            sepby(digit, ','), 
+            ']'
           );
           
         // assert_eq!(parser.parse("[1,2,3,4,5,6]").unwrap(), (vec!['1','2','3','4','5','6'], ""));

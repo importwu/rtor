@@ -26,7 +26,7 @@ fn main() {
     println!("{:?}", res)
 }
 
-fn parse_json<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+fn parse_json<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I::Item>> {
     json_true
         .or(json_false)
         .or(json_null)
@@ -36,42 +36,42 @@ fn parse_json<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I
 }
 
 
-fn json_array<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+fn json_array<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I::Item>> {
     between(
-        token(char('[')),
-        sepby(parse_json, token(char(','))), 
-        token(char(']'))
+        token('['),
+        sepby(parse_json, token(',')), 
+        token(']')
     )
     .map(JsonValue::Array)
     .parse(input)
 }
 
-fn json_object<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+fn json_object<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I::Item>> {
     between(
-        token(char('{')), 
+        token('{'), 
         sepby(
-            pair(token(kstring), token(char(':')),  parse_json), 
-            token(char(','))
+            pair(token(kstring), token(':'),  parse_json), 
+            token(',')
         ), 
-        token(char('}'))
+        token('}')
     )
     .map(|kvs| JsonValue::Object(HashMap::from_iter(kvs)))
     .parse(input)
 }
 
-fn json_null<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+fn json_null<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I::Item>> {
     token(string("null"))
         .map(|_| JsonValue::Null)
         .parse(input)
 }
 
-fn json_true<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+fn json_true<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I::Item>> {
     token(string("true"))
         .map(|_| JsonValue::Boolean(true))
         .parse(input)
 }
 
-fn json_false<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I>> {
+fn json_false<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I::Item>> {
     token(string("false"))
         .map(|_| JsonValue::Boolean(false))
         .parse(input)
@@ -83,11 +83,11 @@ fn json_false<I: Input<Item = char>>(input: I) -> Result<(JsonValue, I), Error<I
 //         .parse(input)
 // }
 
-fn kstring<I: Input<Item = char>>(input: I) -> Result<(String, I), Error<I>> {
+fn kstring<I: Input<Item = char>>(input: I) -> Result<(String, I), Error<I::Item>> {
     between(
-        char('"'), 
+        '"', 
         take_while(|x| *x != '"'),
-        char('"')
+        '"'
     )
     .map(|i: I| String::from_iter(i.items()))
     .parse(input)

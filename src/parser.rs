@@ -1,46 +1,48 @@
+use std::marker::PhantomData;
+
 use crate::Input;
 
-pub trait Parser<I: Input> {
+pub trait Parser<I> {
     type Output;
     type Error;
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error>;
 
-    fn map<F, R>(self, f: F) -> Map<Self, F>
+    fn map<F, R>(self, f: F) -> Map<I, Self, F>
     where 
         F: FnMut(Self::Output) -> R,
         Self: Sized
     {
-        Map { parser: self, f }
+        Map { parser: self, f, marker: PhantomData }
     }
 
-    fn or<P>(self, bparser: P) -> Or<Self, P> 
+    fn or<P>(self, bparser: P) -> Or<I, Self, P> 
     where
         P: Parser<I>,
         Self: Sized
     {
-        Or { aparser: self, bparser }
+        Or { aparser: self, bparser, marker: PhantomData }
     }
 
-    fn and<P>(self, bparser: P) -> And<Self, P> 
+    fn and<P>(self, bparser: P) -> And<I, Self, P> 
     where
         P: Parser<I>,
         Self: Sized
     {
-        And { aparser: self, bparser }
+        And { aparser: self, bparser, marker: PhantomData }
     }
 
-    fn and_then<F, P>(self, f: F) -> AndThen<Self, F> 
+    fn and_then<F, P>(self, f: F) -> AndThen<I, Self, F> 
     where
         P: Parser<I>,
         F: FnOnce(Self::Output) -> P + Clone,
         Self: Sized
     {
-        AndThen { parser: self, f }
+        AndThen { parser: self, f, marker: PhantomData }
     }
 }
 
-impl<F, O, I: Input, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
+impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     type Output = O;
     type Error = E;
 
@@ -49,15 +51,15 @@ impl<F, O, I: Input, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     }
 }
 
-pub struct Map<P, F> {
+pub struct Map<I, P, F> {
     parser: P,
-    f: F
+    f: F,
+    marker: PhantomData<I>
 }
 
 
-impl<I, P, F, R> Parser<I> for Map<P, F> 
+impl<I, P, F, R> Parser<I> for Map<I, P, F> 
 where
-    I: Input,
     P: Parser<I>,
     F: FnMut(P::Output) -> R
 {
@@ -70,14 +72,15 @@ where
     }
 }
 
-pub struct Or<A, B> {
+pub struct Or<I, A, B> {
     aparser: A,
-    bparser: B
+    bparser: B,
+    marker: PhantomData<I>
 }
 
-impl<I, A, B> Parser<I> for Or<A, B> 
+impl<I, A, B> Parser<I> for Or<I, A, B> 
 where
-    I: Input,
+    I: Input, 
     A: Parser<I>,
     B: Parser<I, Output = A::Output, Error = A::Error>
 {
@@ -86,23 +89,23 @@ where
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         match self.aparser.parse(input.clone()) {
-            Ok((o, i)) => Ok((o, i)),
+            Ok(t) => Ok(t),
             Err(_) => match self.bparser.parse(input) {
-                Ok((o, i)) => Ok((o, i)),
+                Ok(t) => Ok(t),
                 Err(e) => Err(e)
             }
         }
     }
 }
 
-pub struct And<A, B> {
+pub struct And<I, A, B> {
     aparser: A,
-    bparser: B
+    bparser: B,
+    marker: PhantomData<I>
 }
 
-impl<I, A, B> Parser<I> for And<A, B> 
+impl<I, A, B> Parser<I> for And<I, A, B> 
 where
-    I: Input,
     A: Parser<I>,
     B: Parser<I, Error = A::Error>
 {
@@ -115,14 +118,14 @@ where
     }
 }
 
-pub struct AndThen<P, F> {
+pub struct AndThen<I, P, F> {
     parser: P,
-    f: F
+    f: F,
+    marker: PhantomData<I>
 }
 
-impl<I, A, B, F> Parser<I> for AndThen<A, F> 
+impl<I, A, B, F> Parser<I> for AndThen<I, A, F> 
 where
-    I: Input,
     A: Parser<I>,
     B: Parser<I, Error = A::Error>,
     F: FnOnce(A::Output) -> B + Clone
@@ -136,18 +139,16 @@ where
     }
 }
 
+
 mod test {
-
-
-    use crate::primitive::char;
 
     use super::*;
 
     #[test]
     fn test() {
-        let p = char('a')
-            .or(char('b'))
-            .or(char('c'))
+        let p = 'a'
+            .or('b')
+            .or('c')
             .parse("bsd");
 
         println!("{:?}", p)

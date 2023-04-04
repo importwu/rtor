@@ -7,20 +7,20 @@ use crate::{
 };
 
 #[inline]
-pub fn char<I>(ch: char) -> impl Parser<I, Output = char, Error = Error<I>> 
+pub fn char<I>(ch: char) -> impl Parser<I, Output = char, Error = Error<I::Item>> 
 where
-    I: Input<Item = char>
+    I: Input<Item = char>,
 {
     satisfy(move |t| *t == ch)
 }
 
-pub fn string<I>(string: &str) -> impl Parser<I, Output = &str, Error = Error<I>> + '_ 
+pub fn string<I>(string: &str) -> impl Parser<I, Output = &str, Error = Error<I::Item>> + '_ 
 where
-    I: Input<Item = char>
+    I: Input<Item = char>,
 {
     move |mut input: I| {
-        for ch in string.chars() {
-            let (_, i) = char(ch).parse(input)?;
+        for mut ch in string.chars() {
+            let (_, i) = ch.parse(input)?;
             input = i;
         }
         return Ok((string, input))
@@ -28,7 +28,7 @@ where
 }
 
 #[inline]
-pub fn item<I>(item: I::Item) -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+pub fn item<I>(item: I::Item) -> impl Parser<I, Output = I::Item, Error = Error<I::Item>> 
 where
     I: Input,
     I::Item: PartialEq
@@ -37,7 +37,7 @@ where
 }
 
 #[inline]
-pub fn items<I>(items: &[I::Item]) -> impl Parser<I, Output = &[I::Item], Error = Error<I>> 
+pub fn items<I>(items: &[I::Item]) -> impl Parser<I, Output = &[I::Item], Error = Error<I::Item>> 
 where
     I: Input,
     I::Item: PartialEq
@@ -52,7 +52,7 @@ where
 }
 
 #[inline]
-pub fn take_while<I, F>(mut pred: F) -> impl Parser<I, Output = I, Error = Error<I>> 
+pub fn take_while<I, F>(mut pred: F) -> impl Parser<I, Output = I, Error = Error<I::Item>> 
 where
     I: Input,
     F: FnMut(&I::Item) -> bool
@@ -63,7 +63,7 @@ where
     }
 }
 
-pub fn satisfy<I, F>(mut pred: F) -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+pub fn satisfy<I, F>(mut pred: F) -> impl Parser<I, Output = I::Item, Error = Error<I::Item>> 
 where
     I: Input,
     F: FnMut(&I::Item) -> bool
@@ -78,7 +78,7 @@ where
 }
 
 #[inline]
-pub fn digit<I>(input: I) -> Result<(I::Item, I), Error<I>> 
+pub fn digit<I>(input: I) -> Result<(I::Item, I), Error<I::Item>> 
 where
     I: Input,
     I::Item: AsChar
@@ -87,7 +87,7 @@ where
 }
 
 #[inline]
-pub fn alpha<I>(input: I) -> Result<(I::Item, I), Error<I>> 
+pub fn alpha<I>(input: I) -> Result<(I::Item, I), Error<I::Item>> 
 where
     I: Input,
     I::Item: AsChar
@@ -96,7 +96,7 @@ where
 }
 
 #[inline]
-pub fn lowercase<I>(input: I) -> Result<(I::Item, I), Error<I>>  
+pub fn lowercase<I>(input: I) -> Result<(I::Item, I), Error<I::Item>>  
 where
     I: Input,
     I::Item: AsChar
@@ -105,7 +105,7 @@ where
 }
 
 #[inline]
-pub fn uppercase<I>(input: I) -> Result<(I::Item, I), Error<I>>  
+pub fn uppercase<I>(input: I) -> Result<(I::Item, I), Error<I::Item>>  
 where
     I: Input,
     I::Item: AsChar
@@ -114,7 +114,7 @@ where
 }
 
 #[inline]
-pub fn alphanum<I>(input: I) -> Result<(I::Item, I), Error<I>>   
+pub fn alphanum<I>(input: I) -> Result<(I::Item, I), Error<I::Item>>   
 where
     I: Input,
     I::Item: AsChar
@@ -123,7 +123,7 @@ where
 }
 
 #[inline]
-pub fn space<I>(input: I) -> Result<(I::Item, I), Error<I>>  
+pub fn space<I>(input: I) -> Result<(I::Item, I), Error<I::Item>>  
 where
     I: Input,
     I::Item: AsChar
@@ -132,7 +132,7 @@ where
 }
 
 #[inline]
-pub fn hex<I>(input: I) -> Result<(I::Item, I), Error<I>> 
+pub fn hex<I>(input: I) -> Result<(I::Item, I), Error<I::Item>> 
 where
     I: Input,
     I::Item: AsChar
@@ -141,7 +141,7 @@ where
 }
 
 #[inline]
-pub fn anyitem<I>(input: I) -> Result<(I::Item, I), Error<I>> 
+pub fn anyitem<I>(input: I) -> Result<(I::Item, I), Error<I::Item>> 
 where
     I: Input
 {
@@ -149,16 +149,16 @@ where
 }
 
 #[inline]
-pub fn oneof<I, F>(items: F) -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+pub fn oneof<I, F>(items: F) -> impl Parser<I, Output = I::Item, Error = Error<I::Item>> 
 where
     I: Input,
     F: FindItem<I::Item>
 {
-    satisfy(move|t| items.find_item(*t))
+    satisfy(move|t: &I::Item| items.find_item(*t))
 }
 
 #[inline]
-pub fn noneof<I, F>(items: F) -> impl Parser<I, Output = I::Item, Error = Error<I>> 
+pub fn noneof<I, F>(items: F) -> impl Parser<I, Output = I::Item, Error = Error<I::Item>> 
 where
     I: Input,
     F: FindItem<I::Item>
@@ -168,7 +168,7 @@ where
 
 
 #[inline]
-pub fn eof<I>() -> impl Parser<I, Output = (), Error = Error<I>> 
+pub fn eof<I>() -> impl Parser<I, Output = (), Error = Error<I::Item>> 
 where
     I: Input
 {
@@ -193,6 +193,29 @@ where
     }
 }
 
+impl<I> Parser<I> for char 
+where 
+    I: Input<Item = char> 
+{
+    type Output = char;
+    type Error = Error<I::Item>;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        satisfy(|t| *t == *self).parse(input)
+    }
+}
+
+impl<I> Parser<I> for u8 
+where 
+    I: Input<Item = u8>,
+{
+    type Output = u8;
+    type Error = Error<I::Item>;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        satisfy(|t| *t == *self).parse(input)
+    }
+}
 
 mod test {
 
@@ -201,7 +224,10 @@ mod test {
     #[test]
     fn test() {
 
-        let p = item(b'a').parse(&b"aaaabc"[..]);
+        // let p = b'a'.parse(&b"aaaabc"[..]);
+        let p = b'a'.parse(&b"aaaabc"[..]);
+        
+        // let p ='a'.or('b').map(|x|x.to_uppercase()).parse("aab");
 
         println!("{:?}", p);
 

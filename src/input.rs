@@ -9,7 +9,7 @@ pub trait Input: Clone {
     fn consume(&mut self) -> Option<Self::Item>;
 
     fn take_while<F>(&mut self, pred: F) -> Self where F: FnMut(&Self::Item) -> bool;
-
+    
     fn items(&self) -> Self::Items;
 }
 
