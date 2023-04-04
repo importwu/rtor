@@ -10,6 +10,8 @@ pub trait Input: Clone {
 
     fn next(&mut self) -> Option<Self::Item>;
 
+    fn peek(&mut self) -> Option<Self::Item>;
+
     fn diff(&self, other: &Self) -> Self;
     
     fn items(&self) -> Self::Items;
@@ -25,6 +27,10 @@ impl<'a> Input for &'a str {
         let ch = chars.next()?;
         *self = chars.as_str();
         Some(ch)
+    }
+
+    fn peek(&mut self) -> Option<Self::Item> {
+        self.chars().next()
     }
 
     fn diff(&self, other: &Self) -> Self {
@@ -46,6 +52,10 @@ impl<'a> Input for &'a [u8] {
         let item = *iter.next()?;
         *self = iter.as_slice();
         Some(item)
+    }
+
+    fn peek(&mut self) -> Option<Self::Item> {
+        self.iter().copied().next()
     }
 
     fn diff(&self, other: &Self) -> Self {

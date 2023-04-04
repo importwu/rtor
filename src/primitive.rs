@@ -41,11 +41,10 @@ where
         let src = input.clone();
 
         loop {
-            let mut i = input.clone();
-            match i.next() {
+            match input.peek() {
                 None => break,
                 Some(t) if pred(&t) => {
-                    input = i;
+                    input.next();
                     continue
                 },
                 Some(_) => break
@@ -215,7 +214,7 @@ mod test {
 
         // println!("{:?}", p);
 
-        println!("{:?}", string("ab").parse("abcd"))
+        println!("{:?}", take_while(|x| *x == 'a').parse("aa  abcd"))
 
     }
 }
