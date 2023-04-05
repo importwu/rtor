@@ -5,7 +5,7 @@ use crate::{
 };
 
 #[inline]
-pub fn refmut<I, P>(parser: &mut P) -> impl Parser<I, Output = P::Output, Error = P::Error> + '_ 
+pub fn ref_mut<I, P>(parser: &mut P) -> impl Parser<I, Output = P::Output, Error = P::Error> + '_ 
 where
     I: Input,
     P: Parser<I>
@@ -91,7 +91,7 @@ where
     
     move |input: I| {
         
-        let mut it = iterator(input, refmut(&mut parser));
+        let mut it = iterator(input, ref_mut(&mut parser));
 
         let o = it.collect::<Vec<_>>();
         
@@ -112,7 +112,7 @@ where
 
         let mut os = vec![o];
 
-        let mut it = iterator(i, refmut(&mut parser));
+        let mut it = iterator(i, ref_mut(&mut parser));
 
         it.for_each(|o| os.push(o));
 
@@ -129,7 +129,7 @@ where
 {
     move |input: I| {
      
-        let mut it = iterator(input, refmut(&mut parser));
+        let mut it = iterator(input, ref_mut(&mut parser));
 
         it.for_each(|_| ());
 
@@ -145,7 +145,7 @@ where
     move |input: I| {
         let (_, i) = parser.parse(input)?;
 
-        let mut it = iterator(i, refmut(&mut parser));
+        let mut it = iterator(i, ref_mut(&mut parser));
 
         it.for_each(|_| ());
 
@@ -153,7 +153,7 @@ where
     }
 }
 
-pub fn sepby<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn sep_by<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>, 
@@ -170,7 +170,7 @@ where
             Err(_) => return Ok((os, input))
         }
 
-        let mut it = iterator(input, refmut(&mut sep).and(refmut(&mut parser)));
+        let mut it = iterator(input, ref_mut(&mut sep).and(ref_mut(&mut parser)));
 
         it.for_each(|o| os.push(o));
 
@@ -178,7 +178,7 @@ where
     }
 }
 
-pub fn sepby1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn sep_by1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>, 
@@ -190,7 +190,7 @@ where
         
         let mut os = vec![o];
 
-        let mut it = iterator(i, refmut(&mut sep).and(refmut(&mut parser)));
+        let mut it = iterator(i, ref_mut(&mut sep).and(ref_mut(&mut parser)));
 
         it.for_each(|o| os.push(o));
 
@@ -225,6 +225,19 @@ where
     }
 }
 
+pub fn followed_by<I, A, B>(mut aparser: A, mut bparser: B) -> impl Parser<I, Output = A::Output, Error = A::Error> 
+where
+    I: Input,
+    A: Parser<I>,
+    B: Parser<I, Error = A::Error>
+{
+    move |input: I| {
+        let (o, i) = aparser.parse(input)?;
+        let (_, i) = bparser.parse(i)?;
+        Ok((o, i))
+    }
+}
+
 
 mod test {
 
@@ -237,12 +250,11 @@ mod test {
 
         let mut parser = between(
             '[', 
-            sepby(digit, ','), 
+            sep_by(digit, ','), 
             ']'
           );
           
-        // assert_eq!(parser.parse("[1,2,3,4,5,6]").unwrap(), (vec!['1','2','3','4','5','6'], ""));
+        assert_eq!(parser.parse("[1,2,3,4,5,6]"), Ok((vec!['1','2','3','4','5','6'], "")));
 
-          println!("{:?}", parser.parse("[1,2,3]"))
     }
 }

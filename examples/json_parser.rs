@@ -1,56 +1,78 @@
-use std::collections::HashMap;
-use std::fs;
+use std::{
+    collections::HashMap, 
+    error::Error
+};
 
 use rtor::{
     Input, 
-    Error, 
     Parser, 
+    ParseResult,
     primitive::{
         token, 
         string,
-        char, take_while
+        oneof,
+        hex, 
+        satisfy, 
+        digit, 
+        space, eof
     }, 
-    combine::{between, sepby, pair}, ParseResult
+    combine::{
+        between, 
+        sep_by, 
+        pair, 
+        count, 
+        skip_many, 
+        opt, 
+        skip_many1, followed_by
+    }
 };
 
-fn main() {
-
-    // let mut input = StreamInput::new(fs::File::open("./examples/json_example.json").unwrap());
+fn main() -> Result<(), Box<dyn Error>>{
 
     let s = r#"
-        1
+        {
+            "number": [1, 2, 2e2, 3e-2, 4.0],
+            "value": [true, false, null, [1, 2, 3]],
+            "obj": {
+                "v": 2,
+                "x": null
+            }
+        }
     "#;
-    
-    let res = json(s);
 
-    println!("{:?}", res)
+    let (json_value, _) = followed_by(json, token(eof)).parse(s.as_bytes())?;
+
+    println!("{:?}", json_value);
+
+    Ok(())
 }
 
-fn json<I: Input<Item = char>>(input: I) -> ParseResult<JsonValue, I> {
+fn json<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> {
     json_true
         .or(json_false)
         .or(json_null)
         .or(json_string)
+        .or(json_number)
         .or(json_array)
         .or(json_object)
     .parse(input)
 }
 
 
-fn json_array<I: Input<Item = char>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_array<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> {
     between(
         token('['),
-        sepby(json, token(',')), 
+        sep_by(json, token(',')), 
         token(']')
     )
     .map(JsonValue::Array)
     .parse(input)
 }
 
-fn json_object<I: Input<Item = char>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_object<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> {
     between(
         token('{'), 
-        sepby(
+        sep_by(
             pair(token(kstring), token(':'),  json), 
             token(',')
         ), 
@@ -60,106 +82,98 @@ fn json_object<I: Input<Item = char>>(input: I) -> ParseResult<JsonValue, I> {
     .parse(input)
 }
 
-fn json_null<I: Input<Item = char>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_null<I: Input<Item = u8>>(input: I) -> ParseResult<JsonValue, I> {
     token(string("null"))
         .map(|_| JsonValue::Null)
         .parse(input)
 }
 
-fn json_true<I: Input<Item = char>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_true<I: Input<Item = u8>>(input: I) -> ParseResult<JsonValue, I> {
     token(string("true"))
         .map(|_| JsonValue::Boolean(true))
         .parse(input)
 }
 
-fn json_false<I: Input<Item = char>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_false<I: Input<Item = u8>>(input: I) -> ParseResult<JsonValue, I> {
     token(string("false"))
         .map(|_| JsonValue::Boolean(false))
         .parse(input)
 }
 
-fn json_string<I: Input<Item = char>>(input: I) -> ParseResult<JsonValue, I> { 
-    kstring
+fn json_string<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> { 
+    token(kstring)
         .map(JsonValue::String)
         .parse(input)
 }
 
-fn kstring<I: Input<Item = char>>(input: I) -> ParseResult<String, I> {
+fn kstring<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<String, I> {
     between(
         '"', 
-        take_while(|x| *x != '"'),
+        |input: I| {
+            let src = input.clone();
+            let (_, i) = skip_many(character).parse(input)?;
+            Ok((src.diff(&i), i))
+        },
         '"'
     )
-    .map(|i: I| String::from_iter(i.items()))
+    .map(|i: I| String::from_utf8(i.as_inner().to_vec()).unwrap())
     .parse(input)
+
 }
 
-// fn character<I: Input<Item = char>>(input: &mut I) -> ParseResult<String> {
-//     alt!(
-//         seq!(attempt(char('\\')), escape).map(|(slash, escape)| format!("{}{}", slash, escape)),
-//         sat(|x| x != '"').map(String::from)
-//     ).parse(input)
-// }
+fn character<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+    ('\\'.and(escape))
+        .or(satisfy(|x| *x != b'"').map(|_|()))
+        .parse(input)
+}
 
-// fn escape<I: Input<Item = char>>(input: &mut I) -> ParseResult<String> {
-//     let ch = oneof("\"\\/bfnrtu").parse(input)?;
-//     if ch == 'u' {
-//         let unicode = seq!(hex, hex, hex, hex)
-//             .map(|h| format!("{}{}{}{}{}", 'u', h.0, h.1, h.2, h.3))
-//             .parse(input)?;
-//         return Ok(unicode)
-//     }
+fn escape<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+    let (o, i) = oneof("\"\\/bfnrtu").parse(input)?;
     
-//     Ok(ch.into())
-// }
+    if o == b'u' {
+        let (_, i) = count(hex, 4).parse(i)?;
+        return Ok(((), i))
+    }
 
-// fn json_number<I: Input<Item = char>>(input: &mut I) -> ParseResult<JsonValue> { 
-//     attempt(seq!(
-//         integer,
-//         opt_or_default(fraction),
-//         opt_or_default(exponent)
-//     ))
-//     .map(|(integer, fraction, exponent)| {
-//         let number = format!("{}{}{}", integer, fraction, exponent).parse::<f32>().unwrap();
-//         JsonValue::Number(number)
-//     })
-//     .parse(input)
-// }
+    Ok(((), i))
+}
 
-// fn integer<I: Input<Item = char>>(input: &mut I) -> ParseResult<String> { 
+fn json_number<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> { 
+    let (_, i) = skip_many(space).parse(input)?;
+    let src = i.clone();
+    let (_, i) = integer.and(opt(fraction)).and(opt(exponent)).parse(i)?;
+    let s = String::from_utf8(src.diff(&i).as_inner().to_vec()).unwrap();
+    Ok((JsonValue::Number(s.parse::<f32>().unwrap()), i))
+}
 
-//         let mut digits = |input: &mut I| {
-//             alt!(
-//                 attempt(char('0').map(String::from)), 
-//                 sat(|ch| matches!(ch, '1'..='9')).and_then(|ch| many(digit).map(move|digits| format!("{}{}", ch, String::from_iter(digits))))
-//             ).parse(input)
-//         };
+fn integer<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+    let digits = |input: I| {
+        '0'.map(|_|())
+            .or(onenine).and(skip_many(digit))
+            .parse(input)
+    };
 
-//         alt!(
-//             attempt(digits),
-//             seq!(char('-'), digits).map(|(minus, digits)| format!("{}{}", minus, digits))
-//         ).parse(input)
+    digits.or('-'.and(digits)).parse(input)
+}
 
-// }
+fn onenine<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+    satisfy(|ch| matches!(ch, b'1'..=b'9')).map(|_|()).parse(input)
+}
 
-// fn fraction<I: Input<Item = char>>(input: &mut I) -> ParseResult<String> { 
-//     seq!(
-//         char('.'),
-//         many1(digit)
-//     )
-//     .map(|(dot, digits)| format!("{}{}", dot, String::from_iter(digits)))
-//     .parse(input)
-// }
+fn fraction<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+    '.'.and(skip_many1(digit)).parse(input)
+}
 
-// fn exponent<I: Input<Item = char>>(input: &mut I) -> ParseResult<String> { 
-//     seq!(
-//         alt!(attempt(char('E')), char('e')),
-//         opt_or_default(alt!(attempt(char('+')), char('-'))), 
-//         many1(digit)
-//     )
-//     .map(|(e, sign, digits)| format!("{}{}{}", e, sign, String::from_iter(digits)))
-//     .parse(input)
-// }
+fn exponent<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+    ('E'.or('e'))
+        .and(opt(sign))
+        .and(skip_many1(digit))
+        .parse(input)
+}
+
+fn sign<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+    '+'.or('-').map(|_|()).parse(input)
+}
 
 enum JsonValue {
     Object(HashMap<String, JsonValue>),

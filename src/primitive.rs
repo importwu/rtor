@@ -161,15 +161,13 @@ where
 
 
 #[inline]
-pub fn eof<I>() -> impl Parser<I, Output = (), Error = Error<I::Item>> 
+pub fn eof<I>(mut input: I) -> ParseResult<(), I> 
 where
     I: Input
 {
-    |mut input: I| {
-        match input.next() {
-            None => Ok(((), input)),
-            Some(t) => Err(Error::Unexpected(t))
-        }
+    match input.next() {
+        None => Ok(((), input)),
+        Some(t) => Err(Error::Unexpected(t))
     }
 }
 
@@ -214,7 +212,7 @@ mod test {
 
         // println!("{:?}", p);
 
-        println!("{:?}", take_while(|x| *x == 'a').parse("aa  abcd"))
+        // println!("{:?}", oneof("as").parse(&b"aa  abcd"[..]))
 
     }
 }

@@ -48,20 +48,20 @@ impl<'a> FindItem<char> for &'a str {
     }
 }
 
-impl<I, const N: usize> FindItem<I> for [I; N] 
-where
-    I: PartialEq
-{
-    fn find_item(&self, item: I) -> bool {
+impl<'a> FindItem<u8> for &'a str {
+    fn find_item(&self, item: u8) -> bool {
+        self.chars().any(|x| x == item as char)
+    }
+}
+
+impl<const N: usize> FindItem<u8> for [u8; N] {
+    fn find_item(&self, item: u8) -> bool {
         self.iter().any(|x| *x == item)
     }
 }
 
-impl<'a, I, const N: usize> FindItem<I> for &'a [I; N] 
-where
-    I: PartialEq
-{
-    fn find_item(&self, item: I) -> bool {
+impl<'a, const N: usize> FindItem<u8> for &'a [u8; N] {
+    fn find_item(&self, item: u8) -> bool {
         self.iter().any(|x| *x == item)
     }
 }

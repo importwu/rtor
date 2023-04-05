@@ -1,7 +1,7 @@
-use std::fmt;
+use std::{fmt, error};
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error<T> {
     Unexpected(T),
     Eoi
@@ -15,3 +15,5 @@ impl<T: fmt::Display> fmt::Display for Error<T> {
         }        
     }
 }
+
+impl<T: fmt::Display + fmt::Debug> error::Error for Error<T> {}
