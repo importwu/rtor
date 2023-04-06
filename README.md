@@ -17,12 +17,11 @@ use rtor::{
 
 fn main() {
     
-    let mut parser = between(
-      char('['), 
-      sepby(digit, char(',')), 
-      char(']')
-    );
+    let mut parser = between('[', sepby(digit, ','), ']');
     
-    assert_eq!(parser.parse("[1,2,3,4,5,6]"), Ok((vec!['1','2','3','4','5','6'], "")));
+    assert_eq!(
+        parser.parse("[1,2,3,4,5,6]"), 
+        Ok((vec!['1','2','3','4','5','6'], ""))
+    );
 }
 ```

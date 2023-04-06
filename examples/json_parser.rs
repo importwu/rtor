@@ -14,7 +14,8 @@ use rtor::{
         hex, 
         satisfy, 
         digit, 
-        space, eof
+        space, 
+        eof
     }, 
     combine::{
         between, 
@@ -23,7 +24,8 @@ use rtor::{
         count, 
         skip_many, 
         opt, 
-        skip_many1, followed_by
+        skip_many1, 
+        followed_by
     }
 };
 
@@ -112,11 +114,11 @@ fn kstring<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<S
         |input: I| {
             let src = input.clone();
             let (_, i) = skip_many(character).parse(input)?;
-            Ok((src.diff(&i), i))
+            let s = String::from_utf8(src.diff(&i).as_inner().to_vec()).unwrap();
+            Ok((s, i))
         },
         '"'
     )
-    .map(|i: I| String::from_utf8(i.as_inner().to_vec()).unwrap())
     .parse(input)
 
 }
@@ -148,16 +150,17 @@ fn json_number<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResu
 
 fn integer<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
     let digits = |input: I| {
-        '0'.map(|_|())
-            .or(onenine).and(skip_many(digit))
+        '0'
+            .or(onenine)
+            .and(skip_many(digit))
             .parse(input)
     };
 
     digits.or('-'.and(digits)).parse(input)
 }
 
-fn onenine<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
-    satisfy(|ch| matches!(ch, b'1'..=b'9')).map(|_|()).parse(input)
+fn onenine<I: Input<Item = u8>>(input: I) -> ParseResult<u8, I> {
+    satisfy(|ch| matches!(ch, b'1'..=b'9')).parse(input)
 }
 
 fn fraction<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
@@ -171,8 +174,8 @@ fn exponent<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
         .parse(input)
 }
 
-fn sign<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
-    '+'.or('-').map(|_|()).parse(input)
+fn sign<I: Input<Item = u8>>(input: I) -> ParseResult<u8, I> {
+    '+'.or('-').parse(input)
 }
 
 enum JsonValue {

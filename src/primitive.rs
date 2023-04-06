@@ -205,14 +205,6 @@ mod test {
     #[test]
     fn test() {
 
-        // let p = b'a'.parse(&b"aaaabc"[..]);
-        // let p = b'a'.parse(&b"aaaabc"[..]);
-        
-        // let p ='a'.or('b').map(|x|x.to_uppercase()).parse("aab");
-
-        // println!("{:?}", p);
-
-        // println!("{:?}", oneof("as").parse(&b"aa  abcd"[..]))
 
     }
 }

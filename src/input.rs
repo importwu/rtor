@@ -5,10 +5,8 @@ use std::{
 };
 
 
-
 pub trait Input: Clone {
     type Item: Copy;
-    // type Items: Iterator<Item = Self::Item>;
     type Inner;
 
     fn next(&mut self) -> Option<Self::Item>;
@@ -17,15 +15,12 @@ pub trait Input: Clone {
 
     fn diff(&self, other: &Self) -> Self;
     
-    // fn items(&self) -> Self::Items;
-
     fn as_inner(&self) -> Self::Inner;
 }
 
 
 impl<'a> Input for &'a str {
     type Item = char;
-    // type Items = Chars<'a>;
     type Inner = &'a str;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -47,14 +42,10 @@ impl<'a> Input for &'a str {
     fn as_inner(&self) -> Self::Inner {
         self
     }
-    // fn items(&self) -> Self::Items {
-    //     self.chars()
-    // }
 }
 
 impl<'a> Input for &'a [u8] {
     type Item = u8;
-    // type Items = Copied<Iter<'a, u8>>;
     type Inner = &'a [u8];
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -72,10 +63,6 @@ impl<'a> Input for &'a [u8] {
         let offset = other.as_ptr() as usize - self.as_ptr() as usize;
         &self[..offset]
     }
-
-    // fn items(&self) -> Self::Items {
-    //     self.iter().copied()
-    // }
 
     fn as_inner(&self) -> Self::Inner {
         self
