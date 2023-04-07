@@ -49,25 +49,15 @@ fn main() -> Result<(), Box<dyn Error>>{
     Ok(())
 }
 
+//https://www.json.org/json-en.html
 fn json<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> {
-    json_true
-        .or(json_false)
-        .or(json_null)
+    json_object
+        .or(json_array)
         .or(json_string)
         .or(json_number)
-        .or(json_array)
-        .or(json_object)
-    .parse(input)
-}
-
-
-fn json_array<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> {
-    between(
-        token('['),
-        sep_by(json, token(',')), 
-        token(']')
-    )
-    .map(JsonValue::Array)
+        .or(json_true)
+        .or(json_false)
+        .or(json_null)
     .parse(input)
 }
 
@@ -80,7 +70,17 @@ fn json_object<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResu
         ), 
         token('}')
     )
-    .map(|kvs| JsonValue::Object(HashMap::from_iter(kvs)))
+    .map(|member| JsonValue::Object(HashMap::from_iter(member)))
+    .parse(input)
+}
+
+fn json_array<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> {
+    between(
+        token('['),
+        sep_by(json, token(',')), 
+        token(']')
+    )
+    .map(JsonValue::Array)
     .parse(input)
 }
 
@@ -148,15 +148,16 @@ fn json_number<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResu
     Ok((JsonValue::Number(s.parse::<f32>().unwrap()), i))
 }
 
+
 fn integer<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
-    let digits = |input: I| {
+    let int = |input: I| {
         '0'
             .or(onenine)
             .and(skip_many(digit))
             .parse(input)
     };
 
-    digits.or('-'.and(digits)).parse(input)
+    int.or('-'.and(int)).parse(input)
 }
 
 fn onenine<I: Input<Item = u8>>(input: I) -> ParseResult<u8, I> {
@@ -221,7 +222,7 @@ fn format_json(value: &JsonValue, sp: usize) -> String {
             res.push_str(&format!("{}{}", space, '['));
             res.push('\n');
             for value in values {
-                res.push_str(&format!("{}", format_json(value, sp + 2)));
+                res.push_str(&format_json(value, sp + 2));
                 res.push(',');
                 res.push('\n');
             }

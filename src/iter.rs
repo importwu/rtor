@@ -53,19 +53,3 @@ impl<I, P> Iter<I, P> {
     }
 }
 
-
-mod test {
-
-    use super::*;
-    use crate::primitive::alpha;
-
-    #[test]
-    fn test() {
-
-        let mut it = iterator("abc", alpha);
-
-        println!("{:?}", it.collect::<Vec<_>>());
-        
-    }
-
-}

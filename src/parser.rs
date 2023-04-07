@@ -51,6 +51,8 @@ impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     }
 }
 
+
+
 pub struct Map<I, P, F> {
     parser: P,
     f: F,
@@ -139,18 +141,3 @@ where
     }
 }
 
-
-mod test {
-
-    use super::*;
-
-    #[test]
-    fn test() {
-        let p = 'a'
-            .or('b')
-            .or('c')
-            .parse("bsd");
-
-        println!("{:?}", p)
-    }
-}

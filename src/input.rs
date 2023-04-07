@@ -1,10 +1,3 @@
-use std::{
-    str::Chars,
-    iter::Copied,
-    slice::Iter
-};
-
-
 pub trait Input: Clone {
     type Item: Copy;
     type Inner;
@@ -69,20 +62,3 @@ impl<'a> Input for &'a [u8] {
     }
 }
 
-
-mod test {
-    use super::*;
-
-    #[test]
-    fn test() {
-        let mut a = "abcdef";
-        let b = a;
-        a.next();
-        a.next();
-        a.next();
-
-        println!("{}", b.diff(&a));
-        println!("{}", a);
-
-    }
-}
