@@ -6,18 +6,17 @@ Parser Combinator Library
 ```rust
 use rtor::{
     combine::{
-        sepby,
+        sep_by,
         between
     },
     primitive::{
-        digit,
-        char
+        digit
     }
 };
 
 fn main() {
     
-    let mut parser = between('[', sepby(digit, ','), ']');
+    let mut parser = between('[', sep_by(digit, ','), ']');
     
     assert_eq!(
         parser.parse("[1,2,3,4,5,6]"), 
