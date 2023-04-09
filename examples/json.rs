@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn Error>>{
     let s = r#"
         {
             "number": [1, 2, 2e2, 3e-2, 4.0],
-            "value": [true, false, null, [1, 2, 3]],
+            "value": [true, false, null, [1, 2, 3], "\"\u123afsawda"],
             "obj": {
                 "v": 2,
                 "x": null
@@ -58,7 +58,7 @@ fn json<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<Json
         .or(json_true)
         .or(json_false)
         .or(json_null)
-    .parse(input)
+        .parse(input)
 }
 
 fn json_object<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> {
