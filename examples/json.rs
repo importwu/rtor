@@ -65,12 +65,12 @@ fn json_object<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResu
     between(
         token('{'), 
         sep_by(
-            pair(token(kstring), token(':'),  json), 
+            pair(token(key), token(':'),  json), 
             token(',')
         ), 
         token('}')
     )
-    .map(|member| JsonValue::Object(HashMap::from_iter(member)))
+    .map(|members| JsonValue::Object(HashMap::from_iter(members)))
     .parse(input)
 }
 
@@ -103,12 +103,12 @@ fn json_false<I: Input<Item = u8>>(input: I) -> ParseResult<JsonValue, I> {
 }
 
 fn json_string<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> { 
-    token(kstring)
+    token(key)
         .map(JsonValue::String)
         .parse(input)
 }
 
-fn kstring<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<String, I> {
+fn key<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<String, I> {
     between(
         '"', 
         |input: I| {
