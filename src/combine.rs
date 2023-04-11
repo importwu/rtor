@@ -1,7 +1,7 @@
 use crate::{
     Input, 
     Parser, 
-    iterator
+    iter::Iter
 };
 
 #[inline]
@@ -89,13 +89,13 @@ where
     P: Parser<I>
 {
     
-    move |input: I| {
+    move |mut input: I| {
         
-        let mut it = iterator(input, ref_mut(&mut parser));
+        let it = Iter::new(&mut input, ref_mut(&mut parser));
 
         let o = it.collect::<Vec<_>>();
         
-        Ok((o, it.into_input()))
+        Ok((o, input))
     }
 }
 
@@ -108,15 +108,15 @@ where
 
     move |input: I| {
 
-        let (o, i) = parser.parse(input)?;
+        let (o, mut i) = parser.parse(input)?;
 
         let mut os = vec![o];
 
-        let mut it = iterator(i, ref_mut(&mut parser));
+        let it = Iter::new(&mut i, ref_mut(&mut parser));
 
         it.for_each(|o| os.push(o));
 
-        Ok((os, it.into_input()))
+        Ok((os, i))
         
     }
 }
@@ -127,13 +127,13 @@ where
     I: Input,
     P: Parser<I>
 {
-    move |input: I| {
+    move |mut input: I| {
      
-        let mut it = iterator(input, ref_mut(&mut parser));
+        let it = Iter::new(&mut input, ref_mut(&mut parser));
 
         it.for_each(|_| ());
 
-        Ok(((), it.into_input()))
+        Ok(((), input))
     }
 }
 
@@ -143,13 +143,13 @@ where
     P: Parser<I>
 {
     move |input: I| {
-        let (_, i) = parser.parse(input)?;
+        let (_, mut i) = parser.parse(input)?;
 
-        let mut it = iterator(i, ref_mut(&mut parser));
+        let it = Iter::new(&mut i, ref_mut(&mut parser));
 
         it.for_each(|_| ());
 
-        Ok(((), it.into_input()))
+        Ok(((), i))
     }
 }
 
@@ -170,11 +170,11 @@ where
             Err(_) => return Ok((os, input))
         }
 
-        let mut it = iterator(input, ref_mut(&mut sep).and(ref_mut(&mut parser)));
+        let it = Iter::new(&mut input, ref_mut(&mut sep).and(ref_mut(&mut parser)));
 
         it.for_each(|o| os.push(o));
 
-        Ok((os, it.into_input()))
+        Ok((os, input))
     }
 }
 
@@ -186,15 +186,15 @@ where
 {
     move |input: I| {
         
-        let (o, i) = parser.parse(input)?;
+        let (o, mut i) = parser.parse(input)?;
         
         let mut os = vec![o];
 
-        let mut it = iterator(i, ref_mut(&mut sep).and(ref_mut(&mut parser)));
+        let it = Iter::new(&mut i, ref_mut(&mut sep).and(ref_mut(&mut parser)));
 
         it.for_each(|o| os.push(o));
 
-        Ok((os, it.into_input()))
+        Ok((os, i))
     }
 }
 

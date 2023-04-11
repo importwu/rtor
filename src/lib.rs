@@ -13,7 +13,6 @@ mod input;
 pub use self::{
     error::Error,
     parser::Parser,
-    iter::iterator,
     input::Input
 };
 

@@ -9,6 +9,7 @@ pub trait Input: Clone {
     fn diff(&self, other: &Self) -> Self;
     
     fn as_inner(&self) -> Self::Inner;
+
 }
 
 

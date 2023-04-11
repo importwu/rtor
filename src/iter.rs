@@ -3,13 +3,23 @@ use crate::{
     Parser
 };
 
-pub struct Iter<I, P> {
-    input: I,
+pub struct Iter<'a, I, P> {
+    input: &'a mut I,
     parser: P,
     flag: bool
 }
 
-impl<'a, I, P> Iterator for &'a mut Iter<I, P> 
+impl<'a, I, P> Iter<'a, I, P> {
+    pub fn new(input: &'a mut I, parser: P) -> Self {
+        Iter { 
+            input, 
+            parser, 
+            flag: false 
+        }
+    }
+}
+
+impl<'a, I, P> Iterator for Iter<'a, I, P> 
 where
     I: Input,
     P: Parser<I>
@@ -22,7 +32,7 @@ where
 
         match self.parser.parse(self.input.clone()) {
             Ok((o, i)) => {
-                self.input = i;
+                *self.input = i;
                 Some(o)
             }
             Err(_) => {
@@ -33,23 +43,3 @@ where
 
     }
 }
-
-pub fn iterator<I, P>(input: I, parser: P) -> Iter<I, P> 
-where
-    I: Input,
-    P: Parser<I>
-{
-    Iter { 
-        input, 
-        parser,
-        flag: false 
-    }
-}
-
-
-impl<I, P> Iter<I, P> {
-    pub fn into_input(self) -> I {
-        self.input
-    }
-}
-
