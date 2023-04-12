@@ -198,6 +198,49 @@ where
     }
 }
 
+pub fn end_by<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+where
+    I: Input,
+    P: Parser<I>, 
+    S: Parser<I, Error = P::Error>
+{
+    move |mut input: I| { 
+        let mut os = vec![];
+
+        match followed_by(ref_mut(&mut parser), ref_mut(&mut sep)).parse(input.clone()) {
+            Ok((o, i)) => {
+                input = i;
+                os.push(o);
+            }
+            Err(_) => return Ok((os, input))
+        }
+
+        let it = Many::new(&mut input, followed_by(ref_mut(&mut parser), ref_mut(&mut sep)));
+
+        it.for_each(|o| os.push(o));
+
+        Ok((os, input))
+    }
+}
+
+pub fn end_by1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+where
+    I: Input,
+    P: Parser<I>, 
+    S: Parser<I, Error = P::Error>
+{
+    move |input: I| { 
+        let (o, mut i) = followed_by(ref_mut(&mut parser), ref_mut(&mut sep)).parse(input.clone())?;
+
+        let mut os = vec![o];
+
+        let it = Many::new(&mut i, followed_by(ref_mut(&mut parser), ref_mut(&mut sep)));
+
+        it.for_each(|o| os.push(o));
+
+        Ok((os, i))
+    }
+}
 
 pub fn count<I, P>(mut parser: P, n: usize) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where 
