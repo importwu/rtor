@@ -1,4 +1,8 @@
-use std::{str::Chars, slice::Iter, iter::Copied};
+use std::{
+    str::Chars, 
+    slice::Iter, 
+    iter::Copied
+};
 
 pub trait Input: Clone {
     type Token: Copy;
