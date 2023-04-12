@@ -9,7 +9,6 @@ use rtor::{
     ParseResult,
     primitive::{
         token, 
-        string,
         oneof,
         hex, 
         satisfy, 
@@ -85,19 +84,19 @@ fn json_array<'a, I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
 }
 
 fn json_null<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
-    token(string("null"))
+    token("null")
         .map(|_| JsonValue::Null)
         .parse(input)
 }
 
 fn json_true<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
-    token(string("true"))
+    token("true")
         .map(|_| JsonValue::Boolean(true))
         .parse(input)
 }
 
 fn json_false<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
-    token(string("false"))
+    token("false")
         .map(|_| JsonValue::Boolean(false))
         .parse(input)
 }

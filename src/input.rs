@@ -4,6 +4,11 @@ use std::{
     iter::Copied
 };
 
+use crate::{
+    iter::Many, 
+    Parser
+};
+
 pub trait Input: Clone {
     type Token: Copy;
     type Tokens: Iterator<Item = Self::Token>;
@@ -16,6 +21,12 @@ pub trait Input: Clone {
 
     fn tokens(&self) -> Self::Tokens;
 
+    fn many<P>(&mut self, parser: P) -> Many<Self, P> 
+    where
+        P: Parser<Self>
+    {
+        Many::new(self, parser)
+    }
 }
 
 

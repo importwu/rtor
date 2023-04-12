@@ -197,3 +197,20 @@ where
     }
 }
 
+impl<I> Parser<I> for &str 
+where
+    I: Input,
+    I::Token: AsChar
+{
+    type Output = I;
+    type Error = Error<I::Token>;
+
+    fn parse(&mut self, mut input: I) -> Result<(Self::Output, I), Self::Error> {
+        let src = input.clone();
+        for ch in self.chars() {
+            let (_, i) = char(ch).parse(input)?;
+            input = i;
+        }
+        return Ok((src.diff(&input), input))
+    }
+}
