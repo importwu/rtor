@@ -3,23 +3,23 @@ use crate::{
     Parser, 
     Error, 
     AsChar,
-    FindItem, 
+    FindToken, 
     ParseResult
 };
 
 #[inline]
-pub fn char<I>(ch: char) -> impl Parser<I, Output = I::Item, Error = Error<I::Item>> 
+pub fn char<I>(ch: char) -> impl Parser<I, Output = I::Token, Error = Error<I::Token>> 
 where
     I: Input,
-    I::Item: AsChar
+    I::Token: AsChar
 {
-    satisfy(move |t: &I::Item| t.as_char() == ch)
+    satisfy(move |t: &I::Token| t.as_char() == ch)
 }
 
-pub fn string<I>(string: &str) -> impl Parser<I, Output = I, Error = Error<I::Item>> + '_ 
+pub fn string<I>(string: &str) -> impl Parser<I, Output = I, Error = Error<I::Token>> + '_ 
 where
     I: Input,
-    I::Item: AsChar
+    I::Token: AsChar
 {
     move |mut input: I| {
         let src = input.clone();
@@ -32,10 +32,10 @@ where
 }
 
 #[inline]
-pub fn take_while<I, F>(mut pred: F) -> impl Parser<I, Output = I, Error = Error<I::Item>> 
+pub fn take_while<I, F>(mut pred: F) -> impl Parser<I, Output = I, Error = Error<I::Token>> 
 where
     I: Input,
-    F: FnMut(&I::Item) -> bool
+    F: FnMut(&I::Token) -> bool
 {
     move |mut input: I| {
         let src = input.clone();
@@ -55,10 +55,10 @@ where
     }
 }
 
-pub fn satisfy<I, F>(mut pred: F) -> impl Parser<I, Output = I::Item, Error = Error<I::Item>> 
+pub fn satisfy<I, F>(mut pred: F) -> impl Parser<I, Output = I::Token, Error = Error<I::Token>> 
 where
     I: Input,
-    F: FnMut(&I::Item) -> bool
+    F: FnMut(&I::Token) -> bool
 {
     move |mut input: I| {
         match input.next() {
@@ -70,93 +70,93 @@ where
 }
 
 #[inline]
-pub fn digit<I>(input: I) -> ParseResult<I::Item, I> 
+pub fn digit<I>(input: I) -> ParseResult<I::Token, I> 
 where
     I: Input,
-    I::Item: AsChar
+    I::Token: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_digit()).parse(input)
+    satisfy(|c: &I::Token| c.as_char().is_ascii_digit()).parse(input)
 }
 
 #[inline]
-pub fn alpha<I>(input: I) -> ParseResult<I::Item, I>
+pub fn alpha<I>(input: I) -> ParseResult<I::Token, I>
 where
     I: Input,
-    I::Item: AsChar
+    I::Token: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_alphabetic()).parse(input)
+    satisfy(|c: &I::Token| c.as_char().is_ascii_alphabetic()).parse(input)
 }
 
 #[inline]
-pub fn lowercase<I>(input: I) -> ParseResult<I::Item, I>  
+pub fn lowercase<I>(input: I) -> ParseResult<I::Token, I>  
 where
     I: Input,
-    I::Item: AsChar
+    I::Token: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_lowercase()).parse(input)
+    satisfy(|c: &I::Token| c.as_char().is_ascii_lowercase()).parse(input)
 }
 
 #[inline]
-pub fn uppercase<I>(input: I) -> ParseResult<I::Item, I>  
+pub fn uppercase<I>(input: I) -> ParseResult<I::Token, I>  
 where
     I: Input,
-    I::Item: AsChar
+    I::Token: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_uppercase()).parse(input)
+    satisfy(|c: &I::Token| c.as_char().is_ascii_uppercase()).parse(input)
 }
 
 #[inline]
-pub fn alphanum<I>(input: I) -> ParseResult<I::Item, I>   
+pub fn alphanum<I>(input: I) -> ParseResult<I::Token, I>   
 where
     I: Input,
-    I::Item: AsChar
+    I::Token: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_alphanumeric()).parse(input)
+    satisfy(|c: &I::Token| c.as_char().is_ascii_alphanumeric()).parse(input)
 }
 
 #[inline]
-pub fn space<I>(input: I) -> ParseResult<I::Item, I>  
+pub fn space<I>(input: I) -> ParseResult<I::Token, I>  
 where
     I: Input,
-    I::Item: AsChar
+    I::Token: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_whitespace()).parse(input)
+    satisfy(|c: &I::Token| c.as_char().is_ascii_whitespace()).parse(input)
 }
 
 #[inline]
-pub fn hex<I>(input: I) -> ParseResult<I::Item, I> 
+pub fn hex<I>(input: I) -> ParseResult<I::Token, I> 
 where
     I: Input,
-    I::Item: AsChar
+    I::Token: AsChar
 {
-    satisfy(|c: &I::Item| c.as_char().is_ascii_hexdigit()).parse(input)
+    satisfy(|c: &I::Token| c.as_char().is_ascii_hexdigit()).parse(input)
 }
 
 #[inline]
-pub fn anychar<I>(input: I) -> ParseResult<I::Item, I> 
+pub fn anychar<I>(input: I) -> ParseResult<I::Token, I> 
 where
     I: Input,
-    I::Item: AsChar
+    I::Token: AsChar
 {
     satisfy(|_| true).parse(input)
 }
 
 #[inline]
-pub fn oneof<I, F>(items: F) -> impl Parser<I, Output = I::Item, Error = Error<I::Item>> 
+pub fn oneof<I, F>(tokens: F) -> impl Parser<I, Output = I::Token, Error = Error<I::Token>> 
 where
     I: Input,
-    F: FindItem<I::Item>
+    F: FindToken<I::Token>
 {
-    satisfy(move|t: &I::Item| items.find_item(*t))
+    satisfy(move|t: &I::Token| tokens.find_token(*t))
 }
 
 #[inline]
-pub fn noneof<I, F>(items: F) -> impl Parser<I, Output = I::Item, Error = Error<I::Item>> 
+pub fn noneof<I, F>(tokens: F) -> impl Parser<I, Output = I::Token, Error = Error<I::Token>> 
 where
     I: Input,
-    F: FindItem<I::Item>
+    F: FindToken<I::Token>
 {
-    satisfy(move|t| !items.find_item(*t))
+    satisfy(move|t| !tokens.find_token(*t))
 }
 
 
@@ -172,14 +172,14 @@ where
 }
 
 #[inline]
-pub fn token<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = Error<I::Item>> 
+pub fn token<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = Error<I::Token>> 
 where
     I: Input,
-    I::Item: AsChar,
-    P: Parser<I, Error = Error<I::Item>>
+    I::Token: AsChar,
+    P: Parser<I, Error = Error<I::Token>>
 {
     move |input: I| {
-        let (_, i) = take_while(|t: &I::Item| t.as_char().is_ascii_whitespace()).parse(input)?;
+        let (_, i) = take_while(|t: &I::Token| t.as_char().is_ascii_whitespace()).parse(input)?;
         parser.parse(i)
     }
 }
@@ -187,13 +187,13 @@ where
 impl<I> Parser<I> for char 
 where 
     I: Input,
-    I::Item: AsChar
+    I::Token: AsChar
 {
-    type Output = I::Item;
-    type Error = Error<I::Item>;
+    type Output = I::Token;
+    type Error = Error<I::Token>;
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        satisfy(|t: &I::Item| t.as_char() == *self).parse(input)
+        satisfy(|t: &I::Token| t.as_char() == *self).parse(input)
     }
 }
 

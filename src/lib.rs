@@ -16,7 +16,7 @@ pub use self::{
     input::Input
 };
 
-pub type ParseResult<O, I> = Result<(O, I), Error<<I as Input>::Item>>;
+pub type ParseResult<O, I> = Result<(O, I), Error<<I as Input>::Token>>;
 
 pub trait AsChar {
     fn as_char(&self) -> char;
@@ -36,31 +36,31 @@ impl AsChar for char {
     }
 }
 
-pub trait FindItem<T> {
+pub trait FindToken<T> {
 
-    fn find_item(&self, item: T) -> bool;
+    fn find_token(&self, token: T) -> bool;
 }
 
-impl<'a> FindItem<char> for &'a str {
-    fn find_item(&self, item: char) -> bool {
-        self.chars().any(|x| x == item)
+impl<'a> FindToken<char> for &'a str {
+    fn find_token(&self, token: char) -> bool {
+        self.chars().any(|x| x == token)
     }
 }
 
-impl<'a> FindItem<u8> for &'a str {
-    fn find_item(&self, item: u8) -> bool {
-        self.chars().any(|x| x == item as char)
+impl<'a> FindToken<u8> for &'a str {
+    fn find_token(&self, token: u8) -> bool {
+        self.chars().any(|x| x == token as char)
     }
 }
 
-impl<const N: usize> FindItem<u8> for [u8; N] {
-    fn find_item(&self, item: u8) -> bool {
-        self.iter().any(|x| *x == item)
+impl<const N: usize> FindToken<u8> for [u8; N] {
+    fn find_token(&self, token: u8) -> bool {
+        self.iter().any(|x| *x == token)
     }
 }
 
-impl<'a, const N: usize> FindItem<u8> for &'a [u8; N] {
-    fn find_item(&self, item: u8) -> bool {
-        self.iter().any(|x| *x == item)
+impl<'a, const N: usize> FindToken<u8> for &'a [u8; N] {
+    fn find_token(&self, token: u8) -> bool {
+        self.iter().any(|x| *x == token)
     }
 }

@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn Error>>{
 }
 
 //https://www.json.org/json-en.html
-fn json<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> {
+fn json<'a, I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     json_object
         .or(json_array)
         .or(json_string)
@@ -61,7 +61,7 @@ fn json<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<Json
         .parse(input)
 }
 
-fn json_object<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_object<'a, I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     between(
         token('{'), 
         sep_by(
@@ -74,7 +74,7 @@ fn json_object<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResu
     .parse(input)
 }
 
-fn json_array<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_array<'a, I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     between(
         token('['),
         sep_by(json, token(',')), 
@@ -84,37 +84,37 @@ fn json_array<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResul
     .parse(input)
 }
 
-fn json_null<I: Input<Item = u8>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_null<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     token(string("null"))
         .map(|_| JsonValue::Null)
         .parse(input)
 }
 
-fn json_true<I: Input<Item = u8>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_true<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     token(string("true"))
         .map(|_| JsonValue::Boolean(true))
         .parse(input)
 }
 
-fn json_false<I: Input<Item = u8>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_false<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     token(string("false"))
         .map(|_| JsonValue::Boolean(false))
         .parse(input)
 }
 
-fn json_string<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> { 
+fn json_string<'a, I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> { 
     token(key)
         .map(JsonValue::String)
         .parse(input)
 }
 
-fn key<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<String, I> {
+fn key<'a, I: Input<Token = u8>>(input: I) -> ParseResult<String, I> {
     between(
         '"', 
         |input: I| {
             let src = input.clone();
             let (_, i) = skip_many(character).parse(input)?;
-            let s = String::from_utf8(src.diff(&i).as_inner().to_vec()).unwrap();
+            let s = String::from_utf8(src.diff(&i).tokens().collect()).unwrap();
             Ok((s, i))
         },
         '"'
@@ -123,13 +123,13 @@ fn key<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<Strin
 
 }
 
-fn character<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+fn character<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
     ('\\'.and(escape))
         .or(satisfy(|x| *x != b'"').map(|_|()))
         .parse(input)
 }
 
-fn escape<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+fn escape<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
     let (o, i) = oneof("\"\\/bfnrtu").parse(input)?;
     
     if o == b'u' {
@@ -140,16 +140,16 @@ fn escape<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
     Ok(((), i))
 }
 
-fn json_number<'a, I: Input<Item = u8, Inner = &'a [u8]>>(input: I) -> ParseResult<JsonValue, I> { 
+fn json_number<'a, I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> { 
     let (_, i) = skip_many(space).parse(input)?;
     let src = i.clone();
     let (_, i) = integer.and(opt(fraction)).and(opt(exponent)).parse(i)?;
-    let s = String::from_utf8(src.diff(&i).as_inner().to_vec()).unwrap();
+    let s = String::from_utf8(src.diff(&i).tokens().collect()).unwrap();
     Ok((JsonValue::Number(s.parse::<f32>().unwrap()), i))
 }
 
 
-fn integer<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+fn integer<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
     let int = |input: I| {
         '0'
             .or(onenine)
@@ -160,22 +160,22 @@ fn integer<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
     int.or('-'.and(int)).parse(input)
 }
 
-fn onenine<I: Input<Item = u8>>(input: I) -> ParseResult<u8, I> {
+fn onenine<I: Input<Token = u8>>(input: I) -> ParseResult<u8, I> {
     satisfy(|ch| matches!(ch, b'1'..=b'9')).parse(input)
 }
 
-fn fraction<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+fn fraction<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
     '.'.and(skip_many1(digit)).parse(input)
 }
 
-fn exponent<I: Input<Item = u8>>(input: I) -> ParseResult<(), I> {
+fn exponent<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
     ('E'.or('e'))
         .and(opt(sign))
         .and(skip_many1(digit))
         .parse(input)
 }
 
-fn sign<I: Input<Item = u8>>(input: I) -> ParseResult<u8, I> {
+fn sign<I: Input<Token = u8>>(input: I) -> ParseResult<u8, I> {
     '+'.or('-').parse(input)
 }
 
