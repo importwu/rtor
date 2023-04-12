@@ -1,4 +1,7 @@
-use std::{fmt, error};
+use std::{
+    fmt, 
+    error
+};
 
 
 #[derive(Debug, PartialEq)]

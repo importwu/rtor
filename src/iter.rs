@@ -3,15 +3,15 @@ use crate::{
     Parser
 };
 
-pub struct Iter<'a, I, P> {
+pub struct Many<'a, I, P> {
     input: &'a mut I,
     parser: P,
     flag: bool
 }
 
-impl<'a, I, P> Iter<'a, I, P> {
+impl<'a, I, P> Many<'a, I, P> {
     pub fn new(input: &'a mut I, parser: P) -> Self {
-        Iter { 
+        Self { 
             input, 
             parser, 
             flag: false 
@@ -19,7 +19,7 @@ impl<'a, I, P> Iter<'a, I, P> {
     }
 }
 
-impl<'a, I, P> Iterator for Iter<'a, I, P> 
+impl<'a, I, P> Iterator for Many<'a, I, P> 
 where
     I: Input,
     P: Parser<I>

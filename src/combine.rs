@@ -1,7 +1,7 @@
 use crate::{
     Input, 
     Parser, 
-    iter::Iter
+    iter::Many
 };
 
 #[inline]
@@ -91,7 +91,7 @@ where
     
     move |mut input: I| {
         
-        let it = Iter::new(&mut input, ref_mut(&mut parser));
+        let it = Many::new(&mut input, ref_mut(&mut parser));
 
         let o = it.collect::<Vec<_>>();
         
@@ -112,7 +112,7 @@ where
 
         let mut os = vec![o];
 
-        let it = Iter::new(&mut i, ref_mut(&mut parser));
+        let it = Many::new(&mut i, ref_mut(&mut parser));
 
         it.for_each(|o| os.push(o));
 
@@ -129,7 +129,7 @@ where
 {
     move |mut input: I| {
      
-        let it = Iter::new(&mut input, ref_mut(&mut parser));
+        let it = Many::new(&mut input, ref_mut(&mut parser));
 
         it.for_each(|_| ());
 
@@ -145,7 +145,7 @@ where
     move |input: I| {
         let (_, mut i) = parser.parse(input)?;
 
-        let it = Iter::new(&mut i, ref_mut(&mut parser));
+        let it = Many::new(&mut i, ref_mut(&mut parser));
 
         it.for_each(|_| ());
 
@@ -170,7 +170,7 @@ where
             Err(_) => return Ok((os, input))
         }
 
-        let it = Iter::new(&mut input, ref_mut(&mut sep).and(ref_mut(&mut parser)));
+        let it = Many::new(&mut input, ref_mut(&mut sep).and(ref_mut(&mut parser)));
 
         it.for_each(|o| os.push(o));
 
@@ -190,7 +190,7 @@ where
         
         let mut os = vec![o];
 
-        let it = Iter::new(&mut i, ref_mut(&mut sep).and(ref_mut(&mut parser)));
+        let it = Many::new(&mut i, ref_mut(&mut sep).and(ref_mut(&mut parser)));
 
         it.for_each(|o| os.push(o));
 

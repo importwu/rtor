@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn Error>>{
             }
         }
     "#;
-
+    
     let (json_value, _) = followed_by(json, token(eof)).parse(s.as_bytes())?;
 
     println!("{:?}", json_value);

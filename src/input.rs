@@ -13,7 +13,7 @@ pub trait Input: Clone {
     fn peek(&mut self) -> Option<Self::Token>;
 
     fn diff(&self, other: &Self) -> Self;
-    
+
     fn tokens(&self) -> Self::Tokens;
 
 }
