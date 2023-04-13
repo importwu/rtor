@@ -64,3 +64,9 @@ impl<'a, const N: usize> FindToken<u8> for &'a [u8; N] {
         self.iter().any(|x| *x == token)
     }
 }
+
+impl<'a> FindToken<u8> for &'a [u8] {
+    fn find_token(&self, token: u8) -> bool {
+        self.iter().any(|x| *x == token)
+    }
+}
