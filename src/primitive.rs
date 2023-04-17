@@ -7,7 +7,6 @@ use crate::{
     ParseResult
 };
 
-#[inline]
 pub fn char<I>(ch: char) -> impl Parser<I, Output = I::Token, Error = Error<I::Token>> 
 where
     I: Input,
@@ -23,15 +22,16 @@ where
 {
     move |mut input: I| {
         let src = input.clone();
+
         for ch in string.chars() {
             let (_, i) = char(ch).parse(input)?;
             input = i;
         }
+        
         return Ok((src.diff(&input), input))
     }
 }
 
-#[inline]
 pub fn take_while<I, F>(mut pred: F) -> impl Parser<I, Output = I, Error = Error<I::Token>> 
 where
     I: Input,
@@ -69,7 +69,6 @@ where
     }
 }
 
-#[inline]
 pub fn digit<I>(input: I) -> ParseResult<I::Token, I> 
 where
     I: Input,
@@ -78,7 +77,6 @@ where
     satisfy(|c: &I::Token| c.as_char().is_ascii_digit()).parse(input)
 }
 
-#[inline]
 pub fn alpha<I>(input: I) -> ParseResult<I::Token, I>
 where
     I: Input,
@@ -87,7 +85,6 @@ where
     satisfy(|c: &I::Token| c.as_char().is_ascii_alphabetic()).parse(input)
 }
 
-#[inline]
 pub fn lowercase<I>(input: I) -> ParseResult<I::Token, I>  
 where
     I: Input,
@@ -96,7 +93,6 @@ where
     satisfy(|c: &I::Token| c.as_char().is_ascii_lowercase()).parse(input)
 }
 
-#[inline]
 pub fn uppercase<I>(input: I) -> ParseResult<I::Token, I>  
 where
     I: Input,
@@ -105,7 +101,6 @@ where
     satisfy(|c: &I::Token| c.as_char().is_ascii_uppercase()).parse(input)
 }
 
-#[inline]
 pub fn alphanum<I>(input: I) -> ParseResult<I::Token, I>   
 where
     I: Input,
@@ -114,7 +109,6 @@ where
     satisfy(|c: &I::Token| c.as_char().is_ascii_alphanumeric()).parse(input)
 }
 
-#[inline]
 pub fn space<I>(input: I) -> ParseResult<I::Token, I>  
 where
     I: Input,
@@ -123,7 +117,6 @@ where
     satisfy(|c: &I::Token| c.as_char().is_ascii_whitespace()).parse(input)
 }
 
-#[inline]
 pub fn hex<I>(input: I) -> ParseResult<I::Token, I> 
 where
     I: Input,
@@ -132,7 +125,6 @@ where
     satisfy(|c: &I::Token| c.as_char().is_ascii_hexdigit()).parse(input)
 }
 
-#[inline]
 pub fn anychar<I>(input: I) -> ParseResult<I::Token, I> 
 where
     I: Input,
@@ -141,7 +133,6 @@ where
     satisfy(|_| true).parse(input)
 }
 
-#[inline]
 pub fn oneof<I, F>(tokens: F) -> impl Parser<I, Output = I::Token, Error = Error<I::Token>> 
 where
     I: Input,
@@ -150,7 +141,6 @@ where
     satisfy(move|t: &I::Token| tokens.find_token(*t))
 }
 
-#[inline]
 pub fn noneof<I, F>(tokens: F) -> impl Parser<I, Output = I::Token, Error = Error<I::Token>> 
 where
     I: Input,
@@ -160,7 +150,6 @@ where
 }
 
 
-#[inline]
 pub fn eof<I>(mut input: I) -> ParseResult<(), I> 
 where
     I: Input
@@ -171,7 +160,6 @@ where
     }
 }
 
-#[inline]
 pub fn token<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = Error<I::Token>> 
 where
     I: Input,
