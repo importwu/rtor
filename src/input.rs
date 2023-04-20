@@ -29,7 +29,6 @@ pub trait Input: Clone {
     }
 }
 
-
 impl<'a> Input for &'a str {
     type Token = char;
     type Tokens = Chars<'a>;
