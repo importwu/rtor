@@ -15,6 +15,14 @@ where
     satisfy(move |t: &I::Token| t.as_char() == ch)
 }
 
+pub fn char_no_case<I>(ch: char) -> impl Parser<I, Output = I::Token, Error = Error<I::Token>> 
+where
+    I: Input,
+    I::Token: AsChar
+{
+    satisfy(move |t: &I::Token| t.as_char().to_ascii_uppercase() == ch.to_ascii_uppercase())
+}
+
 pub fn string<I>(string: &str) -> impl Parser<I, Output = I, Error = Error<I::Token>> + '_ 
 where
     I: Input,
@@ -25,6 +33,23 @@ where
 
         for ch in string.chars() {
             let (_, i) = char(ch).parse(input)?;
+            input = i;
+        }
+        
+        return Ok((src.diff(&input), input))
+    }
+}
+
+pub fn string_no_case<I>(string: &str) -> impl Parser<I, Output = I, Error = Error<I::Token>> + '_ 
+where
+    I: Input,
+    I::Token: AsChar
+{
+    move |mut input: I| {
+        let src = input.clone();
+
+        for ch in string.chars() {
+            let (_, i) = char_no_case(ch).parse(input)?;
             input = i;
         }
         
