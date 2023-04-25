@@ -22,7 +22,7 @@ use rtor::{
         pair, 
         count, 
         skip_many, 
-        opt, 
+        option, 
         skip_many1, 
         followed_by
     }
@@ -142,7 +142,7 @@ fn escape<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
 fn json_number<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> { 
     let (_, i) = skip_many(space).parse(input)?;
     let src = i.clone();
-    let (_, i) = integer.and(opt(fraction)).and(opt(exponent)).parse(i)?;
+    let (_, i) = integer.and(option(fraction)).and(option(exponent)).parse(i)?;
     let s = String::from_utf8(src.diff(&i).tokens().collect()).unwrap();
     Ok((JsonValue::Number(s.parse::<f32>().unwrap()), i))
 }
@@ -169,7 +169,7 @@ fn fraction<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
 
 fn exponent<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
     ('E'.or('e'))
-        .and(opt(sign))
+        .and(option(sign))
         .and(skip_many1(digit))
         .parse(input)
 }
@@ -237,5 +237,4 @@ fn format_json(value: &JsonValue, sp: usize) -> String {
             
     }
 }
-
 

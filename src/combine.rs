@@ -16,7 +16,7 @@ where
     }
 }
 
-pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
+pub fn option<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>
@@ -25,6 +25,19 @@ where
         match parser.parse(input.clone()) {
             Ok((o, i)) => Ok((Some(o), i)),
             Err(_) => Ok((None, input))
+        }
+    }
+}
+
+pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error> 
+where
+    I: Input,
+    P: Parser<I>
+{
+    move |input: I| {
+        match parser.parse(input.clone()) {
+            Ok((o, i)) => Ok(((), i)),
+            Err(_) => Ok(((), input))
         }
     }
 }
