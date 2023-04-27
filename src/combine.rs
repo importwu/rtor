@@ -153,6 +153,20 @@ where
     }
 }
 
+pub fn skip<I, P>(mut parser: P, n: usize) -> impl Parser<I, Output = (), Error = P::Error> 
+where 
+    I: Input,
+    P: Parser<I>
+{
+    move |mut input: I| {
+        for _ in 0..n {
+            let (_, i) = parser.parse(input)?; 
+            input = i;
+        }
+        Ok(((), input))
+    }
+}
+
 pub fn sep_by<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
