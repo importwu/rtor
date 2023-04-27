@@ -16,6 +16,14 @@ pub trait Parser<I> {
         Map { parser: self, f, marker: PhantomData }
     }
 
+    fn map_err<F, R>(self, f: F) -> MapErr<I, Self, F> 
+    where
+        F: FnMut(Self::Error) -> R,
+        Self: Sized
+    {
+        MapErr { parser: self, f, marker: PhantomData }
+    }
+
     fn or<P>(self, bparser: P) -> Or<I, Self, P> 
     where
         P: Parser<I>,
@@ -51,8 +59,6 @@ impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     }
 }
 
-
-
 pub struct Map<I, P, F> {
     parser: P,
     f: F,
@@ -71,6 +77,28 @@ where
     fn parse(&mut self, input: I) ->  Result<(Self::Output, I), Self::Error> {
         let (o, i) = self.parser.parse(input)?;
         Ok(((self.f)(o), i))
+    }
+}
+
+pub struct MapErr<I, P, F> {
+    parser: P,
+    f: F,
+    marker: PhantomData<I>
+}
+
+impl<I, P, F, R> Parser<I> for MapErr<I, P, F> 
+where
+    P: Parser<I>,
+    F: FnMut(P::Error) -> R
+{
+    type Output = P::Output;
+    type Error = R;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        match self.parser.parse(input) {
+            Ok(t) => Ok(t),
+            Err(e) => Err((self.f)(e))
+        }
     }
 }
 
@@ -140,4 +168,3 @@ where
         (self.f.clone())(o).parse(i)
     }
 }
-

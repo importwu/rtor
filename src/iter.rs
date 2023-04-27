@@ -27,7 +27,6 @@ where
     type Item = P::Output;
 
     fn next(&mut self) -> Option<Self::Item> {
-
         if self.flag { return None }
 
         match self.parser.parse(self.input.clone()) {
@@ -40,6 +39,5 @@ where
                 None
             }
         }
-
     }
 }

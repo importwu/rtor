@@ -23,14 +23,12 @@ pub trait AsChar {
 }
 
 impl AsChar for u8 {
-    #[inline]
     fn as_char(&self) -> char {
         *self as char
     }
 }
 
 impl AsChar for char {
-    #[inline]
     fn as_char(&self) -> char {
         *self
     }

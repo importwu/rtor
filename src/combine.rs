@@ -16,18 +16,28 @@ where
     }
 }
 
-pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
+pub fn option<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>
 {
     move |input: I| {
-
         match parser.parse(input.clone()) {
-            Ok((o, i)) => {
-                Ok((Some(o), i))
-            },
+            Ok((o, i)) => Ok((Some(o), i)),
             Err(_) => Ok((None, input))
+        }
+    }
+}
+
+pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error> 
+where
+    I: Input,
+    P: Parser<I>
+{
+    move |input: I| {
+        match parser.parse(input.clone()) {
+            Ok((o, i)) => Ok(((), i)),
+            Err(_) => Ok(((), input))
         }
     }
 }
@@ -39,11 +49,8 @@ where
     P::Output: Clone
 {
     move |input: I| {
-
         match parser.parse(input.clone()) {
-            Ok(t) => {
-                Ok(t)
-            },
+            Ok(t) => Ok(t),
             Err(_) => Ok((default.clone(), input))
         }
     }
@@ -58,7 +65,6 @@ where
     R: Parser<I, Error = L::Error>
 {
     move |input: I| {
-
         let (_, i) = lparser.parse(input)?;
         let (o, i)= mparser.parse(i)?;
         let (_, i) = rparser.parse(i)?;
@@ -78,6 +84,7 @@ where
         let (o1, i) = lparser.parse(input)?;
         let (_, i) = mparser.parse(i)?;
         let (o2, i) = rparser.parse(i)?;
+
         Ok(((o1, o2), i))
     }
 }
@@ -88,11 +95,8 @@ where
     I: Input,
     P: Parser<I>
 {
-    
     move |mut input: I| {
-        
         let it = input.many(ref_mut(&mut parser));
-
         let o = it.collect::<Vec<_>>();
         
         Ok((o, input))
@@ -105,15 +109,10 @@ where
     I: Input,
     P: Parser<I>
 {
-
     move |input: I| {
-
         let (o, mut i) = parser.parse(input)?;
-
         let mut os = vec![o];
-
         let it = i.many(ref_mut(&mut parser));
-
         it.for_each(|o| os.push(o));
 
         Ok((os, i))
@@ -128,9 +127,7 @@ where
     P: Parser<I>
 {
     move |mut input: I| {
-     
         let it = input.many(ref_mut(&mut parser));
-
         it.for_each(|_| ());
 
         Ok(((), input))
@@ -144,9 +141,7 @@ where
 {
     move |input: I| {
         let (_, mut i) = parser.parse(input)?;
-
         let it = i.many(ref_mut(&mut parser));
-
         it.for_each(|_| ());
 
         Ok(((), i))
@@ -185,7 +180,6 @@ where
         }
 
         let it = input.many(ref_mut(&mut sep).and(ref_mut(&mut parser)));
-
         it.for_each(|o| os.push(o));
 
         Ok((os, input))
@@ -199,13 +193,9 @@ where
     S: Parser<I, Error = P::Error>
 {
     move |input: I| {
-        
         let (o, mut i) = parser.parse(input)?;
-        
         let mut os = vec![o];
-
         let it = i.many(ref_mut(&mut sep).and(ref_mut(&mut parser)));
-
         it.for_each(|o| os.push(o));
 
         Ok((os, i))
@@ -230,7 +220,6 @@ where
         }
 
         let it = input.many(followed_by(ref_mut(&mut parser), ref_mut(&mut sep)));
-
         it.for_each(|o| os.push(o));
 
         Ok((os, input))
@@ -245,11 +234,8 @@ where
 {
     move |input: I| { 
         let (o, mut i) = followed_by(ref_mut(&mut parser), ref_mut(&mut sep)).parse(input.clone())?;
-
         let mut os = vec![o];
-
         let it = i.many(followed_by(ref_mut(&mut parser), ref_mut(&mut sep)));
-
         it.for_each(|o| os.push(o));
 
         Ok((os, i))
@@ -263,11 +249,13 @@ where
 {
     move |mut input: I| {
         let mut os = vec![];
+
         for _ in 0..n {
             let (o, i) = parser.parse(input)?; 
             input = i;
             os.push(o);
         }
+
         Ok((os, input))
     }
 }
