@@ -24,7 +24,8 @@ use rtor::{
         skip_many, 
         option, 
         skip_many1, 
-        followed_by
+        followed_by, 
+        recognize
     }
 };
 
@@ -111,9 +112,8 @@ fn key<I: Input<Token = u8>>(input: I) -> ParseResult<String, I> {
     between(
         '"', 
         |input: I| {
-            let src = input.clone();
-            let (_, i) = skip_many(character).parse(input)?;
-            let s = String::from_utf8(src.diff(&i).tokens().collect()).unwrap();
+            let (o, i) = recognize(skip_many(character)).parse(input)?;
+            let s = String::from_utf8(o.tokens().collect()).unwrap();
             Ok((s, i))
         },
         '"'
@@ -141,9 +141,8 @@ fn escape<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
 
 fn json_number<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> { 
     let (_, i) = skip_many(space).parse(input)?;
-    let src = i.clone();
-    let (_, i) = integer.and(option(fraction)).and(option(exponent)).parse(i)?;
-    let s = String::from_utf8(src.diff(&i).tokens().collect()).unwrap();
+    let (o, i) = recognize(integer.and(option(fraction)).and(option(exponent))).parse(i)?;
+    let s = String::from_utf8(o.tokens().collect()).unwrap();
     Ok((JsonValue::Number(s.parse::<f32>().unwrap()), i))
 }
 

@@ -197,6 +197,27 @@ where
     }
 }
 
+pub fn pure<I, T, E>(t: T) -> impl Parser<I, Output = T, Error = E> 
+where
+    I: Input,
+    T: Clone
+{
+    move|input: I| {
+        Ok((t.clone(), input))
+    }
+}
+
+pub fn error<I>(mut input: I) -> ParseResult<(), I> 
+where
+    I: Input
+{
+    match input.next() {
+        None => Err(Error::Eoi),
+        Some(c) => Err(Error::Unexpected(c))
+    }
+}
+
+
 impl<I> Parser<I> for char 
 where 
     I: Input,

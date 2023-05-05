@@ -1,7 +1,6 @@
 use crate::{
     Input, 
     Parser, 
-    iter::Many
 };
 
 #[inline]
@@ -36,7 +35,7 @@ where
 {
     move |input: I| {
         match parser.parse(input.clone()) {
-            Ok((o, i)) => Ok(((), i)),
+            Ok((_, i)) => Ok(((), i)),
             Err(_) => Ok(((), input))
         }
     }
@@ -260,16 +259,6 @@ where
     }
 }
 
-pub fn pure<I, T, E>(t: T) -> impl Parser<I, Output = T, Error = E> 
-where
-    I: Input,
-    T: Clone
-{
-    move|input: I| {
-        Ok((t.clone(), input))
-    }
-}
-
 pub fn followed_by<I, A, B>(mut aparser: A, mut bparser: B) -> impl Parser<I, Output = A::Output, Error = A::Error> 
 where
     I: Input,
@@ -280,5 +269,30 @@ where
         let (o, i) = aparser.parse(input)?;
         let (_, i) = bparser.parse(i)?;
         Ok((o, i))
+    }
+}
+
+pub fn peek<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = P::Error> 
+where
+    I: Input,
+    P: Parser<I>
+{
+    move |input: I| {
+        match parser.parse(input.clone()) {
+            Ok((o, _)) => Ok((o, input)),
+            Err(e) => Err(e)
+        }
+    }
+}
+
+pub fn recognize<I, P>(mut parser: P) -> impl Parser<I, Output = I, Error = P::Error> 
+where
+    I: Input,
+    P: Parser<I>
+{
+    move |input: I| {
+        let src = input.clone();
+        let (_, i) = parser.parse(input)?;
+        Ok((src.diff(&i), i))
     }
 }
