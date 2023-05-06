@@ -209,7 +209,8 @@ where
 
 pub fn error<I>(mut input: I) -> ParseResult<(), I> 
 where
-    I: Input
+    I: Input,
+    I::Token: AsChar
 {
     match input.next() {
         None => Err(Error::Eoi),
@@ -221,7 +222,7 @@ where
 impl<I> Parser<I> for char 
 where 
     I: Input,
-    I::Token: AsChar
+    I::Token: AsChar 
 {
     type Output = I::Token;
     type Error = Error<I::Token>;
