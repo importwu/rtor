@@ -32,6 +32,22 @@ pub trait Parser<I> {
         Or { aparser: self, bparser, marker: PhantomData }
     }
 
+    fn andl<P>(self, bparser: P) -> AndL<I, Self, P> 
+    where
+        P: Parser<I>,
+        Self: Sized
+    {
+        AndL { aparser: self, bparser, marker: PhantomData }
+    }
+
+    fn andr<P>(self, bparser: P) -> AndR<I, Self, P> 
+    where
+        P: Parser<I>,
+        Self: Sized
+    {
+        AndR { aparser: self, bparser, marker: PhantomData }
+    }
+
     fn and<P>(self, bparser: P) -> And<I, Self, P> 
     where
         P: Parser<I>,
@@ -128,6 +144,47 @@ where
     }
 }
 
+pub struct AndL<I, A, B> {
+    aparser: A,
+    bparser: B,
+    marker: PhantomData<I>
+}
+
+impl<I, A, B> Parser<I> for AndL<I, A, B> 
+where
+    A: Parser<I>,
+    B: Parser<I, Error = A::Error>
+{
+    type Output = A::Output;
+    type Error = A::Error;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (o, i) = self.aparser.parse(input)?;
+        let (_, i) = self.bparser.parse(i)?;
+        Ok((o, i))
+    }
+}
+
+pub struct AndR<I, A, B> {
+    aparser: A,
+    bparser: B,
+    marker: PhantomData<I>
+}
+
+impl<I, A, B> Parser<I> for AndR<I, A, B> 
+where
+    A: Parser<I>,
+    B: Parser<I, Error = A::Error>
+{
+    type Output = B::Output;
+    type Error = A::Error;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (_, i) = self.aparser.parse(input)?;
+        self.bparser.parse(i)
+    }
+}
+
 pub struct And<I, A, B> {
     aparser: A,
     bparser: B,
@@ -139,12 +196,13 @@ where
     A: Parser<I>,
     B: Parser<I, Error = A::Error>
 {
-    type Output = B::Output;
-    type Error = B::Error;
+    type Output = (A::Output, B::Output);
+    type Error = A::Error;
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        let (_, i) = self.aparser.parse(input)?;
-        self.bparser.parse(i)
+        let (o1, i) = self.aparser.parse(input)?;
+        let (o2, i) = self.bparser.parse(i)?;
+        Ok(((o1, o2), i))
     }
 }
 

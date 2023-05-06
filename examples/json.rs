@@ -123,7 +123,7 @@ fn key<I: Input<Token = u8>>(input: I) -> ParseResult<String, I> {
 }
 
 fn character<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
-    ('\\'.and(escape))
+    ('\\'.andr(escape))
         .or(satisfy(|x| *x != b'"').map(|_|()))
         .parse(input)
 }
@@ -141,7 +141,7 @@ fn escape<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
 
 fn json_number<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> { 
     let (_, i) = skip_many(space).parse(input)?;
-    let (o, i) = recognize(integer.and(option(fraction)).and(option(exponent))).parse(i)?;
+    let (o, i) = recognize(integer.andr(option(fraction)).andr(option(exponent))).parse(i)?;
     let s = String::from_utf8(o.tokens().collect()).unwrap();
     Ok((JsonValue::Number(s.parse::<f32>().unwrap()), i))
 }
@@ -151,11 +151,11 @@ fn integer<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
     let int = |input: I| {
         '0'
             .or(onenine)
-            .and(skip_many(digit))
+            .andr(skip_many(digit))
             .parse(input)
     };
 
-    int.or('-'.and(int)).parse(input)
+    int.or('-'.andr(int)).parse(input)
 }
 
 fn onenine<I: Input<Token = u8>>(input: I) -> ParseResult<u8, I> {
@@ -163,13 +163,13 @@ fn onenine<I: Input<Token = u8>>(input: I) -> ParseResult<u8, I> {
 }
 
 fn fraction<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
-    '.'.and(skip_many1(digit)).parse(input)
+    '.'.andr(skip_many1(digit)).parse(input)
 }
 
 fn exponent<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
     ('E'.or('e'))
-        .and(option(sign))
-        .and(skip_many1(digit))
+        .andr(option(sign))
+        .andr(skip_many1(digit))
         .parse(input)
 }
 

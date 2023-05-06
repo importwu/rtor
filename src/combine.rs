@@ -178,7 +178,7 @@ where
             Err(_) => return Ok((os, input))
         }
 
-        let it = input.many(ref_mut(&mut sep).and(ref_mut(&mut parser)));
+        let it = input.many(ref_mut(&mut sep).andr(ref_mut(&mut parser)));
         it.for_each(|o| os.push(o));
 
         Ok((os, input))
@@ -194,7 +194,7 @@ where
     move |input: I| {
         let (o, mut i) = parser.parse(input)?;
         let mut os = vec![o];
-        let it = i.many(ref_mut(&mut sep).and(ref_mut(&mut parser)));
+        let it = i.many(ref_mut(&mut sep).andr(ref_mut(&mut parser)));
         it.for_each(|o| os.push(o));
 
         Ok((os, i))
