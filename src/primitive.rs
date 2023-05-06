@@ -222,7 +222,7 @@ where
 impl<I> Parser<I> for char 
 where 
     I: Input,
-    I::Token: AsChar
+    I::Token: AsChar 
 {
     type Output = I::Token;
     type Error = Error<I::Token>;
