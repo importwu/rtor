@@ -16,7 +16,7 @@ impl<T: fmt::Display> fmt::Display for Error<T> {
         match self {
            Self::Unexpected(t) =>  write!(f, "unexpected {}", t),
            Self::Eoi => write!(f, "end of input"),
-           Self::Custom(msg) -> write!(f, msg)
+           Self::Custom(msg) => write!(f, "{}", msg)
         }        
     }
 }
