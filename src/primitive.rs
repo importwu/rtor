@@ -163,7 +163,7 @@ where
     I: Input,
     F: FindToken<I::Token>
 {
-    satisfy(move|t: &I::Token| tokens.find_token(t.clone()))
+    satisfy(move|t: &I::Token| tokens.find_token(t))
 }
 
 pub fn noneof<I, F>(tokens: F) -> impl Parser<I, Output = I::Token, Error = Error<I::Token>> 
@@ -171,7 +171,7 @@ where
     I: Input,
     F: FindToken<I::Token>
 {
-    satisfy(move|t: &I::Token| !tokens.find_token(t.clone()))
+    satisfy(move|t: &I::Token| !tokens.find_token(t))
 }
 
 
