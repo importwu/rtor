@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub trait Input: Clone {
-    type Token: Copy;
+    type Token: Clone;
     type Tokens: Iterator<Item = Self::Token>;
 
     fn next(&mut self) -> Option<Self::Token>;
