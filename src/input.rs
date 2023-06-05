@@ -88,7 +88,7 @@ impl<'a, T: Clone> Input for &'a [T] {
     
     fn next(&mut self) -> Option<Self::Token> {
         let mut iter = self.iter();
-        let item = iter.cloned().next()?;
+        let item = iter.next()?.clone();
         *self = iter.as_slice();
         Some(item)
     }
