@@ -1,6 +1,7 @@
 use crate::{
     Input, 
     Parser, 
+    Many, 
 };
 
 #[inline]
@@ -95,9 +96,10 @@ where
     P: Parser<I>
 {
     move |mut input: I| {
-        let it = input.many(ref_mut(&mut parser));
-        let o = it.collect::<Vec<_>>();
         
+        let it = Many::new(&mut input, ref_mut(&mut parser));
+        let o = it.collect::<Vec<_>>();
+
         Ok((o, input))
     }
 }
@@ -111,7 +113,8 @@ where
     move |input: I| {
         let (o, mut i) = parser.parse(input)?;
         let mut os = vec![o];
-        let it = i.many(ref_mut(&mut parser));
+
+        let it = Many::new(&mut i, ref_mut(&mut parser));
         it.for_each(|o| os.push(o));
 
         Ok((os, i))
@@ -126,7 +129,8 @@ where
     P: Parser<I>
 {
     move |mut input: I| {
-        let it = input.many(ref_mut(&mut parser));
+
+        let it = Many::new(&mut input, ref_mut(&mut parser));
         it.for_each(|_| ());
 
         Ok(((), input))
@@ -140,7 +144,8 @@ where
 {
     move |input: I| {
         let (_, mut i) = parser.parse(input)?;
-        let it = i.many(ref_mut(&mut parser));
+
+        let it = Many::new(&mut i, ref_mut(&mut parser));
         it.for_each(|_| ());
 
         Ok(((), i))
@@ -178,7 +183,7 @@ where
             Err(_) => return Ok((os, input))
         }
 
-        let it = input.many(ref_mut(&mut sep).andr(ref_mut(&mut parser)));
+        let it = Many::new(&mut input, ref_mut(&mut sep).andr(ref_mut(&mut parser)));
         it.for_each(|o| os.push(o));
 
         Ok((os, input))
@@ -194,7 +199,8 @@ where
     move |input: I| {
         let (o, mut i) = parser.parse(input)?;
         let mut os = vec![o];
-        let it = i.many(ref_mut(&mut sep).andr(ref_mut(&mut parser)));
+       
+        let it = Many::new(&mut i, ref_mut(&mut sep).andr(ref_mut(&mut parser)));
         it.for_each(|o| os.push(o));
 
         Ok((os, i))
@@ -218,7 +224,7 @@ where
             Err(_) => return Ok((os, input))
         }
 
-        let it = input.many(followed_by(ref_mut(&mut parser), ref_mut(&mut sep)));
+        let it = Many::new(&mut input, followed_by(ref_mut(&mut parser), ref_mut(&mut sep)));
         it.for_each(|o| os.push(o));
 
         Ok((os, input))
@@ -234,9 +240,9 @@ where
     move |input: I| { 
         let (o, mut i) = followed_by(ref_mut(&mut parser), ref_mut(&mut sep)).parse(input.clone())?;
         let mut os = vec![o];
-        let it = i.many(followed_by(ref_mut(&mut parser), ref_mut(&mut sep)));
-        it.for_each(|o| os.push(o));
 
+        let it = Many::new(&mut i, followed_by(ref_mut(&mut parser), ref_mut(&mut sep)));
+        it.for_each(|o| os.push(o));
         Ok((os, i))
     }
 }
@@ -294,5 +300,15 @@ where
         let src = input.clone();
         let (_, i) = parser.parse(input)?;
         Ok((src.diff(&i), i))
+    }
+}
+
+pub fn pure<I, T, E>(t: T) -> impl Parser<I, Output = T, Error = E> 
+where
+    I: Input,
+    T: Clone
+{
+    move|input: I| {
+        Ok((t.clone(), input))
     }
 }

@@ -13,7 +13,8 @@ mod input;
 pub use self::{
     error::Error,
     parser::Parser,
-    input::Input
+    input::Input,
+    iter::Many
 };
 
 pub type ParseResult<O, I> = Result<(O, I), Error<<I as Input>::Token>>;
@@ -51,38 +52,20 @@ impl<'a> FindToken<u8> for &'a str {
     }
 }
 
-// impl<const N: usize> FindToken<u8> for [u8; N] {
-//     fn find_token(&self, token: u8) -> bool {
-//         self.iter().any(|x| *x == token)
-//     }
-// }
-
-// impl<'a, const N: usize> FindToken<u8> for &'a [u8; N] {
-//     fn find_token(&self, token: u8) -> bool {
-//         self.iter().any(|x| *x == token)
-//     }
-// }
-
-// impl<'a> FindToken<u8> for &'a [u8] {
-//     fn find_token(&self, token: u8) -> bool {
-//         self.iter().any(|x| *x == token)
-//     }
-// }
-
 impl<T: PartialEq, const N: usize> FindToken<T> for [T; N] {
     fn find_token(&self, token: &T) -> bool {
-        self.iter().any(|x| *x == *token)
+        self.iter().any(|x| x == token)
     }
 }
 
 impl<'a, T: PartialEq, const N: usize> FindToken<T> for &'a [T; N] {
     fn find_token(&self, token: &T) -> bool {
-        self.iter().any(|x| *x == *token)
+        self.iter().any(|x| x == token)
     }
 }
 
 impl<'a,  T: PartialEq> FindToken<T> for &'a [T] {
     fn find_token(&self, token: &T) -> bool {
-        self.iter().any(|x| *x == *token)
+        self.iter().any(|x| x == token)
     }
 }

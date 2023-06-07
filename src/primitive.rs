@@ -197,16 +197,6 @@ where
     }
 }
 
-pub fn pure<I, T, E>(t: T) -> impl Parser<I, Output = T, Error = E> 
-where
-    I: Input,
-    T: Clone
-{
-    move|input: I| {
-        Ok((t.clone(), input))
-    }
-}
-
 pub fn error<I>(mut input: I) -> ParseResult<(), I> 
 where
     I: Input,
