@@ -102,6 +102,14 @@ where
     satisfy(|c: &I::Token| c.as_char().is_ascii_digit()).parse(input)
 }
 
+pub fn newline<I>(input: I) -> ParseResult<I::Token, I>
+where
+    I: Input,
+    I::Token: AsChar
+{
+    satisfy(|c: &I::Token| c.as_char() == '\n').parse(input)
+}
+
 pub fn alpha<I>(input: I) -> ParseResult<I::Token, I>
 where
     I: Input,
