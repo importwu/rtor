@@ -64,6 +64,10 @@ pub trait Parser<I> {
     {
         AndThen { parser: self, f, marker: PhantomData }
     }
+    
+    fn ignore(self) -> Ignore<I, Self> where Self: Sized {
+        Ignore {parser: self, marker: PhantomData }
+    }
 }
 
 impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
@@ -224,5 +228,23 @@ where
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         let (o, i) = self.parser.parse(input)?;
         (self.f.clone())(o).parse(i)
+    }
+}
+
+pub struct Ignore<I, P> {
+    parser: P,
+    marker: PhantomData<I>
+}
+
+impl<I, P> Parser<I> for Ignore<I, P> 
+where
+    P: Parser<I>
+{
+    type Output = ();
+    type Error = P::Error;
+    
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (_, i) = self.parser.parse(input)?;
+        Ok(((), i))
     }
 }
