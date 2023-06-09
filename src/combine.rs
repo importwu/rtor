@@ -2,21 +2,13 @@ use crate::{
     Input, 
     Parser, 
     Many, 
+    Error, 
+    AsChar, 
+    ParseError, 
+    primitive::ascii::space, 
 };
 
-#[inline]
-pub fn ref_mut<I, P>(parser: &mut P) -> impl Parser<I, Output = P::Output, Error = P::Error> + '_ 
-where
-    I: Input,
-    P: Parser<I>
-{
-    #[inline]
-    move |input: I| {
-        (*parser).parse(input)
-    }
-}
-
-pub fn option<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
+pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>
@@ -25,33 +17,6 @@ where
         match parser.parse(input.clone()) {
             Ok((o, i)) => Ok((Some(o), i)),
             Err(_) => Ok((None, input))
-        }
-    }
-}
-
-pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error> 
-where
-    I: Input,
-    P: Parser<I>
-{
-    move |input: I| {
-        match parser.parse(input.clone()) {
-            Ok((_, i)) => Ok(((), i)),
-            Err(_) => Ok(((), input))
-        }
-    }
-}
-
-pub fn opt_or<I, P>(mut parser: P, default: P::Output) -> impl Parser<I, Output = P::Output, Error = P::Error> 
-where
-    I: Input,
-    P: Parser<I>,
-    P::Output: Clone
-{
-    move |input: I| {
-        match parser.parse(input.clone()) {
-            Ok(t) => Ok(t),
-            Err(_) => Ok((default.clone(), input))
         }
     }
 }
@@ -97,7 +62,7 @@ where
 {
     move |mut input: I| {
         
-        let it = Many::new(&mut input, ref_mut(&mut parser));
+        let it = Many::new(&mut input, parser.as_mut());
         let o = it.collect::<Vec<_>>();
 
         Ok((o, input))
@@ -114,7 +79,7 @@ where
         let (o, mut i) = parser.parse(input)?;
         let mut os = vec![o];
 
-        let it = Many::new(&mut i, ref_mut(&mut parser));
+        let it = Many::new(&mut i, parser.as_mut());
         it.for_each(|o| os.push(o));
 
         Ok((os, i))
@@ -130,7 +95,7 @@ where
 {
     move |mut input: I| {
 
-        let it = Many::new(&mut input, ref_mut(&mut parser));
+        let it = Many::new(&mut input, parser.as_mut());
         it.for_each(|_| ());
 
         Ok(((), input))
@@ -145,7 +110,7 @@ where
     move |input: I| {
         let (_, mut i) = parser.parse(input)?;
 
-        let it = Many::new(&mut i, ref_mut(&mut parser));
+        let it = Many::new(&mut i, parser.as_mut());
         it.for_each(|_| ());
 
         Ok(((), i))
@@ -166,31 +131,27 @@ where
     }
 }
 
-pub fn sep_by<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn sepby<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>, 
     S: Parser<I, Error = P::Error>
 {
-    move |mut input: I| {
-        let mut os = vec![];
+    move |input: I| {
+        let (mut os, mut i) = match parser.parse(input.clone()) {
+            Ok((o, i)) => (vec![o], i),
+            Err(_) => return Ok((vec![], input))
+        };
 
-        match parser.parse(input.clone()) {
-            Ok((o, i)) => {
-                input = i;
-                os.push(o);
-            }
-            Err(_) => return Ok((os, input))
-        }
-
-        let it = Many::new(&mut input, ref_mut(&mut sep).andr(ref_mut(&mut parser)));
+        let it = Many::new(&mut i, sep.as_mut().andr(parser.as_mut()));
         it.for_each(|o| os.push(o));
 
-        Ok((os, input))
+        Ok((os, i))
     }
 }
 
-pub fn sep_by1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+
+pub fn sepby1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>, 
@@ -200,48 +161,43 @@ where
         let (o, mut i) = parser.parse(input)?;
         let mut os = vec![o];
        
-        let it = Many::new(&mut i, ref_mut(&mut sep).andr(ref_mut(&mut parser)));
+        let it = Many::new(&mut i, sep.as_mut().andr(parser.as_mut()));
         it.for_each(|o| os.push(o));
 
         Ok((os, i))
     }
 }
 
-pub fn end_by<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
-where
-    I: Input,
-    P: Parser<I>, 
-    S: Parser<I, Error = P::Error>
-{
-    move |mut input: I| { 
-        let mut os = vec![];
-
-        match followed_by(ref_mut(&mut parser), ref_mut(&mut sep)).parse(input.clone()) {
-            Ok((o, i)) => {
-                input = i;
-                os.push(o);
-            }
-            Err(_) => return Ok((os, input))
-        }
-
-        let it = Many::new(&mut input, followed_by(ref_mut(&mut parser), ref_mut(&mut sep)));
-        it.for_each(|o| os.push(o));
-
-        Ok((os, input))
-    }
-}
-
-pub fn end_by1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn endby<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>, 
     S: Parser<I, Error = P::Error>
 {
     move |input: I| { 
-        let (o, mut i) = followed_by(ref_mut(&mut parser), ref_mut(&mut sep)).parse(input.clone())?;
+        let (mut os, mut i) = match parser.as_mut().andl(sep.as_mut()).parse(input.clone()) {
+            Ok((o, i)) => (vec![o], i),
+            Err(_) => return Ok((vec![], input))
+        };
+
+        let it = Many::new(&mut i, parser.as_mut().andl(sep.as_mut()));
+        it.for_each(|o| os.push(o));
+
+        Ok((os, i))
+    }
+}
+
+pub fn endby1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+where
+    I: Input,
+    P: Parser<I>, 
+    S: Parser<I, Error = P::Error>
+{
+    move |input: I| { 
+        let (o, mut i) = parser.as_mut().andl(sep.as_mut()).parse(input.clone())?;
         let mut os = vec![o];
 
-        let it = Many::new(&mut i, followed_by(ref_mut(&mut parser), ref_mut(&mut sep)));
+        let it = Many::new(&mut i, parser.as_mut().andl(sep.as_mut()));
         it.for_each(|o| os.push(o));
         Ok((os, i))
     }
@@ -265,18 +221,6 @@ where
     }
 }
 
-pub fn followed_by<I, A, B>(mut aparser: A, mut bparser: B) -> impl Parser<I, Output = A::Output, Error = A::Error> 
-where
-    I: Input,
-    A: Parser<I>,
-    B: Parser<I, Error = A::Error>
-{
-    move |input: I| {
-        let (o, i) = aparser.parse(input)?;
-        let (_, i) = bparser.parse(i)?;
-        Ok((o, i))
-    }
-}
 
 pub fn peek<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = P::Error> 
 where
@@ -303,12 +247,29 @@ where
     }
 }
 
-pub fn pure<I, T, E>(t: T) -> impl Parser<I, Output = T, Error = E> 
+
+pub fn not<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error>
 where
     I: Input,
-    T: Clone
+    P: Parser<I>,
+    P::Error: Error<I>
 {
-    move|input: I| {
-        Ok((t.clone(), input))
+    move |mut input: I| {
+        match parser.parse(input.clone()) {
+            Err(_) => Ok(((), input)),
+            Ok(_) => Err(Error::from_token(input.next()))
+        }
+    }
+}
+
+pub fn token<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = ParseError<I::Token>> 
+where
+    I: Input,
+    I::Token: AsChar,
+    P: Parser<I, Error = ParseError<I::Token>>
+{
+    move |input: I| {
+        let (_, i) = skip_many(space).parse(input)?;
+        parser.parse(i)
     }
 }

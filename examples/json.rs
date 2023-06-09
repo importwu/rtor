@@ -8,24 +8,26 @@ use rtor::{
     Parser, 
     ParseResult,
     primitive::{
-        token, 
         oneof,
-        hex, 
-        satisfy, 
-        digit, 
-        space, 
-        eof
+        sat, 
+        ascii::{
+            digit,
+            hex
+        }, 
+        eof, 
+        anychar
     }, 
     combine::{
+        token, 
         between, 
-        sep_by, 
+        sepby, 
         pair, 
-        count, 
+        skip, 
         skip_many, 
-        option, 
+        opt,
         skip_many1, 
-        followed_by, 
-        recognize
+        recognize, 
+        not
     }
 };
 
@@ -42,10 +44,10 @@ fn main() -> Result<(), Box<dyn Error>>{
         }
     "#;
     
-    let (json_value, _) = followed_by(json, token(eof)).parse(s.as_bytes())?;
+    let (json_value, _) = token(json).andl(token(eof)).parse(s.as_bytes())?;
 
-    println!("{:?}", json_value);
-
+    println!("{:#?}", json_value);
+    
     Ok(())
 }
 
@@ -53,19 +55,19 @@ fn main() -> Result<(), Box<dyn Error>>{
 fn json<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     json_object
         .or(json_array)
-        .or(json_string)
         .or(json_number)
-        .or(json_true)
-        .or(json_false)
-        .or(json_null)
+        .or(key.map(JsonValue::String))
+        .or("true".map(|_| JsonValue::Boolean(true)))
+        .or("false".map(|_| JsonValue::Boolean(false)))
+        .or("null".map(|_| JsonValue::Null))
         .parse(input)
 }
 
 fn json_object<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     between(
-        token('{'), 
-        sep_by(
-            pair(token(key), token(':'),  json), 
+        '{', 
+        sepby(
+            pair(token(key), token(':'),  token(json)), 
             token(',')
         ), 
         token('}')
@@ -76,81 +78,49 @@ fn json_object<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
 
 fn json_array<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     between(
-        token('['),
-        sep_by(json, token(',')), 
+        '[',
+        sepby(token(json), token(',')), 
         token(']')
     )
     .map(JsonValue::Array)
     .parse(input)
 }
 
-fn json_null<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
-    token("null")
-        .map(|_| JsonValue::Null)
-        .parse(input)
-}
-
-fn json_true<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
-    token("true")
-        .map(|_| JsonValue::Boolean(true))
-        .parse(input)
-}
-
-fn json_false<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
-    token("false")
-        .map(|_| JsonValue::Boolean(false))
-        .parse(input)
-}
-
-fn json_string<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> { 
-    token(key)
-        .map(JsonValue::String)
-        .parse(input)
-}
-
 fn key<I: Input<Token = u8>>(input: I) -> ParseResult<String, I> {
     between(
         '"', 
-        |input: I| {
-            let (o, i) = recognize(skip_many(character)).parse(input)?;
-            let s = String::from_utf8(o.tokens().collect()).unwrap();
-            Ok((s, i))
-        },
+        recognize(skip_many(character)).map(|i: I| String::from_utf8(i.tokens().collect()).unwrap()),
         '"'
     )
     .parse(input)
-
 }
 
 fn character<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
-    ('\\'.andr(escape))
-        .or(satisfy(|x| *x != b'"').map(|_|()))
+    '\\'.andr(escape)
+        .or(not('"').andr(anychar.ignore()))
         .parse(input)
 }
 
 fn escape<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
-    let (o, i) = oneof("\"\\/bfnrtu").parse(input)?;
-    
-    if o == b'u' {
-        let (_, i) = count(hex, 4).parse(i)?;
-        return Ok(((), i))
-    }
-
-    Ok(((), i))
+    oneof("\"\\/bfnrt").ignore()
+        .or('u'.andr(skip(hex, 4)))
+        .parse(input)
 }
 
 fn json_number<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> { 
-    let (_, i) = skip_many(space).parse(input)?;
-    let (o, i) = recognize(integer.andr(option(fraction)).andr(option(exponent))).parse(i)?;
-    let s = String::from_utf8(o.tokens().collect()).unwrap();
-    Ok((JsonValue::Number(s.parse::<f32>().unwrap()), i))
+    recognize(integer.andr(opt('.'.andr(skip_many1(digit)))).andr(opt(exponent)))
+        .map(|i: I| {
+            let s = String::from_utf8(i.tokens().collect()).unwrap();
+            JsonValue::Number(s.parse::<f32>().unwrap())
+        })
+        .parse(input)
 }
 
 
 fn integer<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
     let int = |input: I| {
         '0'
-            .or(onenine)
+            .or(sat(|ch| matches!(ch, b'1'..=b'9')))
             .andr(skip_many(digit))
             .parse(input)
     };
@@ -158,25 +128,14 @@ fn integer<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
     int.or('-'.andr(int)).parse(input)
 }
 
-fn onenine<I: Input<Token = u8>>(input: I) -> ParseResult<u8, I> {
-    satisfy(|ch| matches!(ch, b'1'..=b'9')).parse(input)
-}
-
-fn fraction<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
-    '.'.andr(skip_many1(digit)).parse(input)
-}
-
 fn exponent<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
-    ('E'.or('e'))
-        .andr(option(sign))
+    'E'.or('e')
+        .andr(opt('+'.or('-')))
         .andr(skip_many1(digit))
         .parse(input)
 }
 
-fn sign<I: Input<Token = u8>>(input: I) -> ParseResult<u8, I> {
-    '+'.or('-').parse(input)
-}
-
+#[derive(Debug)]
 enum JsonValue {
     Object(HashMap<String, JsonValue>),
     Array(Vec<JsonValue>),
@@ -186,54 +145,54 @@ enum JsonValue {
     Null
 }
 
-impl std::fmt::Debug for JsonValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let json = format_json(self, 0);
-        f.write_str(&json)
-    }
-}
+// impl std::fmt::Debug for JsonValue {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         let json = format_json(self, 0);
+//         f.write_str(&json)
+//     }
+// }
 
-fn format_json(value: &JsonValue, sp: usize) -> String {
-    let space = " ".repeat(sp);
-    match value {
-        JsonValue::Object(pairs) => {
-            let mut res = String::new();
-            res.push_str(&format!("{}{}", space, '{'));
-            res.push('\n');
-            for (key, value) in pairs.into_iter() {
-                res.push_str(&format!("  {}\"{}\"", space, key));
-                res.push(':');
-                let value = format_json(value, sp + 2);
-                let value = value.chars().skip(sp + 2).collect::<String>();
-                res.push_str(&value);
-                res.push(',');
-                res.push('\n');
-            }
-            res.pop(); res.pop();
-            res.push('\n');
-            res.push_str(&format!("{}{}", space, '}'));
-            res
-        },
-        JsonValue::Array(values) => {
-            let mut res = String::new();
-            let space = " ".repeat(sp);
-            res.push_str(&format!("{}{}", space, '['));
-            res.push('\n');
-            for value in values {
-                res.push_str(&format_json(value, sp + 2));
-                res.push(',');
-                res.push('\n');
-            }
-            res.pop(); res.pop();
-            res.push('\n');
-            res.push_str(&format!("{}{}", space, ']'));
-            res
-        },
-        JsonValue::String(str) => format!("{}\"{}\"", space, str),
-        JsonValue::Number(num) => format!("{}{}", space, num),
-        JsonValue::Boolean(bool) => format!("{}{}", space, bool),
-        JsonValue::Null => format!("{}{}", space, "null"),
+// fn format_json(value: &JsonValue, sp: usize) -> String {
+//     let space = " ".repeat(sp);
+//     match value {
+//         JsonValue::Object(pairs) => {
+//             let mut res = String::new();
+//             res.push_str(&format!("{}{}", space, '{'));
+//             res.push('\n');
+//             for (key, value) in pairs.into_iter() {
+//                 res.push_str(&format!("  {}\"{}\"", space, key));
+//                 res.push(':');
+//                 let value = format_json(value, sp + 2);
+//                 let value = value.chars().skip(sp + 2).collect::<String>();
+//                 res.push_str(&value);
+//                 res.push(',');
+//                 res.push('\n');
+//             }
+//             res.pop(); res.pop();
+//             res.push('\n');
+//             res.push_str(&format!("{}{}", space, '}'));
+//             res
+//         },
+//         JsonValue::Array(values) => {
+//             let mut res = String::new();
+//             let space = " ".repeat(sp);
+//             res.push_str(&format!("{}{}", space, '['));
+//             res.push('\n');
+//             for value in values {
+//                 res.push_str(&format_json(value, sp + 2));
+//                 res.push(',');
+//                 res.push('\n');
+//             }
+//             res.pop(); res.pop();
+//             res.push('\n');
+//             res.push_str(&format!("{}{}", space, ']'));
+//             res
+//         },
+//         JsonValue::String(str) => format!("{}\"{}\"", space, str),
+//         JsonValue::Number(num) => format!("{}{}", space, num),
+//         JsonValue::Boolean(bool) => format!("{}{}", space, bool),
+//         JsonValue::Null => format!("{}{}", space, "null"),
             
-    }
-}
+//     }
+// }
 

@@ -68,6 +68,11 @@ pub trait Parser<I> {
     fn ignore(self) -> Ignore<I, Self> where Self: Sized {
         Ignore {parser: self, marker: PhantomData }
     }
+
+    fn as_mut(&mut self) -> RefMut<I, Self> where Self: Sized {
+        RefMut { parser: self, marker: PhantomData }
+    }
+
 }
 
 impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
@@ -79,6 +84,7 @@ impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Map<I, P, F> {
     parser: P,
     f: F,
@@ -246,5 +252,22 @@ where
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         let (_, i) = self.parser.parse(input)?;
         Ok(((), i))
+    }
+}
+
+pub struct RefMut<'a, I, P> {
+    parser: &'a mut P,
+    marker: PhantomData<I>
+}
+
+impl<I, P> Parser<I> for RefMut<'_, I, P> 
+where
+    P: Parser<I>
+{
+    type Output = P::Output;
+    type Error = P::Error;
+    
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        self.parser.parse(input)
     }
 }

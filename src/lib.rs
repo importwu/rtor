@@ -11,13 +11,16 @@ mod iter;
 mod input;
 
 pub use self::{
-    error::Error,
+    error::{
+        ParseError,
+        Error
+    },
     parser::Parser,
     input::Input,
     iter::Many
 };
 
-pub type ParseResult<O, I> = Result<(O, I), Error<<I as Input>::Token>>;
+pub type ParseResult<O, I> = Result<(O, I), ParseError<<I as Input>::Token>>;
 
 pub trait AsChar {
     fn as_char(&self) -> char;
