@@ -69,11 +69,13 @@ pub trait Parser<I> {
         Ignore {parser: self, marker: PhantomData }
     }
 
-    fn as_mut(&mut self) -> RefMut<I, Self> where Self: Sized {
+    fn ref_mut(&mut self) -> RefMut<I, Self> where Self: Sized {
         RefMut { parser: self, marker: PhantomData }
     }
 
 }
+
+
 
 impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     type Output = O;
@@ -84,7 +86,7 @@ impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Map<I, P, F> {
     parser: P,
     f: F,
@@ -106,6 +108,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct MapErr<I, P, F> {
     parser: P,
     f: F,
@@ -128,6 +131,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct Or<I, A, B> {
     aparser: A,
     bparser: B,
@@ -154,6 +158,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct AndL<I, A, B> {
     aparser: A,
     bparser: B,
@@ -175,6 +180,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct AndR<I, A, B> {
     aparser: A,
     bparser: B,
@@ -195,6 +201,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct And<I, A, B> {
     aparser: A,
     bparser: B,
@@ -216,6 +223,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct AndThen<I, P, F> {
     parser: P,
     f: F,
@@ -237,6 +245,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct Ignore<I, P> {
     parser: P,
     marker: PhantomData<I>
@@ -255,6 +264,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct RefMut<'a, I, P> {
     parser: &'a mut P,
     marker: PhantomData<I>
