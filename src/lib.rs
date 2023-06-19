@@ -6,7 +6,7 @@ pub mod primitive;
 
 pub mod combine;
 
-mod iter;
+pub mod iter;
 
 mod input;
 
@@ -17,7 +17,6 @@ pub use self::{
     },
     parser::Parser,
     input::Input,
-    iter::Many
 };
 
 pub type ParseResult<O, I> = Result<(O, I), ParseError<<I as Input>::Token>>;

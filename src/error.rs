@@ -30,7 +30,7 @@ impl<I: Input> Error<I> for ParseError<I::Token> {
 impl<T: fmt::Display> fmt::Display for ParseError<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-           Self::Unexpected(t) =>  write!(f, "unexpected {}", t),
+           Self::Unexpected(t) =>  write!(f, "unexpected char {}", t),
            Self::Eoi => write!(f, "end of input"),
            Self::Message(msg) => write!(f, "{}", msg)
         }        

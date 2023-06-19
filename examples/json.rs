@@ -51,6 +51,16 @@ fn main() -> Result<(), Box<dyn Error>>{
     Ok(())
 }
 
+#[derive(Debug)]
+enum JsonValue {
+    Object(HashMap<String, JsonValue>),
+    Array(Vec<JsonValue>),
+    String(String),
+    Number(f32),
+    Boolean(bool),
+    Null
+}
+
 //https://www.json.org/json-en.html
 fn json<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     json_object
@@ -135,64 +145,4 @@ fn exponent<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
         .parse(input)
 }
 
-#[derive(Debug)]
-enum JsonValue {
-    Object(HashMap<String, JsonValue>),
-    Array(Vec<JsonValue>),
-    String(String),
-    Number(f32),
-    Boolean(bool),
-    Null
-}
-
-// impl std::fmt::Debug for JsonValue {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         let json = format_json(self, 0);
-//         f.write_str(&json)
-//     }
-// }
-
-// fn format_json(value: &JsonValue, sp: usize) -> String {
-//     let space = " ".repeat(sp);
-//     match value {
-//         JsonValue::Object(pairs) => {
-//             let mut res = String::new();
-//             res.push_str(&format!("{}{}", space, '{'));
-//             res.push('\n');
-//             for (key, value) in pairs.into_iter() {
-//                 res.push_str(&format!("  {}\"{}\"", space, key));
-//                 res.push(':');
-//                 let value = format_json(value, sp + 2);
-//                 let value = value.chars().skip(sp + 2).collect::<String>();
-//                 res.push_str(&value);
-//                 res.push(',');
-//                 res.push('\n');
-//             }
-//             res.pop(); res.pop();
-//             res.push('\n');
-//             res.push_str(&format!("{}{}", space, '}'));
-//             res
-//         },
-//         JsonValue::Array(values) => {
-//             let mut res = String::new();
-//             let space = " ".repeat(sp);
-//             res.push_str(&format!("{}{}", space, '['));
-//             res.push('\n');
-//             for value in values {
-//                 res.push_str(&format_json(value, sp + 2));
-//                 res.push(',');
-//                 res.push('\n');
-//             }
-//             res.pop(); res.pop();
-//             res.push('\n');
-//             res.push_str(&format!("{}{}", space, ']'));
-//             res
-//         },
-//         JsonValue::String(str) => format!("{}\"{}\"", space, str),
-//         JsonValue::Number(num) => format!("{}{}", space, num),
-//         JsonValue::Boolean(bool) => format!("{}{}", space, bool),
-//         JsonValue::Null => format!("{}{}", space, "null"),
-            
-//     }
-// }
 

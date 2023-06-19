@@ -214,13 +214,14 @@ where
 }
 
 
-pub fn eof<I>(mut input: I) -> ParseResult<(), I> 
+pub fn eof<I, E>(mut input: I) ->  Result<((), I), E>
 where
-    I: Input
+    I: Input,
+    E: Error<I>
 {
     match input.next() {
         None => Ok(((), input)),
-        Some(t) => Err(ParseError::Unexpected(t))
+        Some(t) => Err(Error::from_token(Some(t)))
     }
 }
 
@@ -231,7 +232,7 @@ where
 {
     match input.next() {
         None => Err(Error::from_token(None)),
-        Some(c) => Err(Error::from_token(Some(c)))
+        Some(t) => Err(Error::from_token(Some(t)))
     }
 }
 
