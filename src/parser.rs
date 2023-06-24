@@ -24,36 +24,36 @@ pub trait Parser<I> {
         MapErr { parser: self, f, marker: PhantomData }
     }
 
-    fn or<P>(self, bparser: P) -> Or<I, Self, P> 
+    fn or<P>(self, second: P) -> Or<I, Self, P> 
     where
         P: Parser<I>,
         Self: Sized
     {
-        Or { aparser: self, bparser, marker: PhantomData }
+        Or { first: self, second, marker: PhantomData }
     }
 
-    fn andl<P>(self, bparser: P) -> AndL<I, Self, P> 
+    fn andl<P>(self, second: P) -> AndL<I, Self, P> 
     where
         P: Parser<I>,
         Self: Sized
     {
-        AndL { aparser: self, bparser, marker: PhantomData }
+        AndL { first: self, second, marker: PhantomData }
     }
 
-    fn andr<P>(self, bparser: P) -> AndR<I, Self, P> 
+    fn andr<P>(self, second: P) -> AndR<I, Self, P> 
     where
         P: Parser<I>,
         Self: Sized
     {
-        AndR { aparser: self, bparser, marker: PhantomData }
+        AndR { first: self, second, marker: PhantomData }
     }
 
-    fn and<P>(self, bparser: P) -> And<I, Self, P> 
+    fn and<P>(self, second: P) -> And<I, Self, P> 
     where
         P: Parser<I>,
         Self: Sized
     {
-        And { aparser: self, bparser, marker: PhantomData }
+        And { first: self, second, marker: PhantomData }
     }
 
     fn and_then<F, P>(self, f: F) -> AndThen<I, Self, F> 
@@ -137,8 +137,8 @@ where
 
 #[derive(Clone)]
 pub struct Or<I, A, B> {
-    aparser: A,
-    bparser: B,
+    first: A,
+    second: B,
     marker: PhantomData<I>
 }
 
@@ -152,9 +152,9 @@ where
     type Error = A::Error;
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        match self.aparser.parse(input.clone()) {
+        match self.first.parse(input.clone()) {
             Ok(t) => Ok(t),
-            Err(_) => match self.bparser.parse(input) {
+            Err(_) => match self.second.parse(input) {
                 Ok(t) => Ok(t),
                 Err(e) => Err(e)
             }
@@ -164,8 +164,8 @@ where
 
 #[derive(Clone)]
 pub struct AndL<I, A, B> {
-    aparser: A,
-    bparser: B,
+    first: A,
+    second: B,
     marker: PhantomData<I>
 }
 
@@ -178,16 +178,16 @@ where
     type Error = A::Error;
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        let (o, i) = self.aparser.parse(input)?;
-        let (_, i) = self.bparser.parse(i)?;
+        let (o, i) = self.first.parse(input)?;
+        let (_, i) = self.second.parse(i)?;
         Ok((o, i))
     }
 }
 
 #[derive(Clone)]
 pub struct AndR<I, A, B> {
-    aparser: A,
-    bparser: B,
+    first: A,
+    second: B,
     marker: PhantomData<I>
 }
 
@@ -200,15 +200,15 @@ where
     type Error = A::Error;
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        let (_, i) = self.aparser.parse(input)?;
-        self.bparser.parse(i)
+        let (_, i) = self.first.parse(input)?;
+        self.second.parse(i)
     }
 }
 
 #[derive(Clone)]
 pub struct And<I, A, B> {
-    aparser: A,
-    bparser: B,
+    first: A,
+    second: B,
     marker: PhantomData<I>
 }
 
@@ -221,8 +221,8 @@ where
     type Error = A::Error;
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        let (o1, i) = self.aparser.parse(input)?;
-        let (o2, i) = self.bparser.parse(i)?;
+        let (o1, i) = self.first.parse(input)?;
+        let (o2, i) = self.second.parse(i)?;
         Ok(((o1, o2), i))
     }
 }
