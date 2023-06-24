@@ -262,6 +262,23 @@ where
     }
 }
 
+pub fn cond<I, C, P>(mut condition: C, mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
+where
+    I: Input,
+    C: Parser<I>,
+    P: Parser<I, Error = C::Error>
+{
+    move |input: I| {
+        match condition.parse(input.clone()) {
+            Ok((_, i)) => match parser.parse(i) {
+                Ok((o, i)) => Ok((Some(o), i)),
+                Err(e) => Err(e)
+            }
+            Err(_) => Ok((None, input))
+        }
+    }
+}
+
 pub fn token<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = ParseError<I::Token>> 
 where
     I: Input,
