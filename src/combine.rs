@@ -22,7 +22,7 @@ where
 }
 
 
-pub fn between<I, L, M, R>(mut lparser: L, mut mparser: M, mut rparser: R) -> impl Parser<I, Output = M::Output, Error = L::Error> 
+pub fn between<I, L, M, R>(mut left: L, mut middle: M, mut right: R) -> impl Parser<I, Output = M::Output, Error = L::Error> 
 where
     I: Input,
     L: Parser<I>,
@@ -30,15 +30,15 @@ where
     R: Parser<I, Error = L::Error>
 {
     move |input: I| {
-        let (_, i) = lparser.parse(input)?;
-        let (o, i)= mparser.parse(i)?;
-        let (_, i) = rparser.parse(i)?;
+        let (_, i) = left.parse(input)?;
+        let (o, i)= middle.parse(i)?;
+        let (_, i) = right.parse(i)?;
 
         Ok((o, i))
     }
 }
 
-pub fn pair<I, L, M, R>(mut lparser: L, mut mparser: M, mut rparser: R) ->  impl Parser<I, Output = (L::Output, R::Output), Error = L::Error>
+pub fn pair<I, L, M, R>(mut left: L, mut middle: M, mut right: R) ->  impl Parser<I, Output = (L::Output, R::Output), Error = L::Error>
 where 
     I: Input,
     L: Parser<I>,
@@ -46,9 +46,9 @@ where
     R: Parser<I, Error = L::Error>
 {
     move |input: I| {
-        let (o1, i) = lparser.parse(input)?;
-        let (_, i) = mparser.parse(i)?;
-        let (o2, i) = rparser.parse(i)?;
+        let (o1, i) = left.parse(input)?;
+        let (_, i) = middle.parse(i)?;
+        let (o2, i) = right.parse(i)?;
 
         Ok(((o1, o2), i))
     }
