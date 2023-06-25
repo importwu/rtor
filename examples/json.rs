@@ -81,7 +81,7 @@ fn json(input: &str) -> ParseResult<JsonValue, &str> {
 fn json_object(input: &str) -> ParseResult<JsonValue, &str> {
     between(
         char('{'), 
-        sepby(pair(token(key), token(char(':')),  token(json)), token(char(','))), 
+        sepby(pair(token(key), token(char(':')), token(json)), token(char(','))), 
         token(char('}'))
     )
     .map(|members| JsonValue::Object(HashMap::from_iter(members)))

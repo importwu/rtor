@@ -37,7 +37,7 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
            Self::Unexpected(Some(t)) =>  write!(f, "unexpected {}", t),
-           Self::Unexpected(None) => write!(f, "end of input"),
+           Self::Unexpected(None) => f.write_str("end of input"),
            Self::Expected(message) => f.write_str(message)
         }        
     }

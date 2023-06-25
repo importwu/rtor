@@ -1,7 +1,6 @@
 use crate::{
     Input, 
     Parser, 
-    ParseError, 
     AsChar,
     FindToken, 
     ParseResult, 
@@ -27,7 +26,7 @@ where
         let src = input.clone();
 
         for ch in string.chars() {
-            let (_, i) = char(ch).parse(input)?;
+            let (_, i) = sat(|t: &I::Token| t.as_char() == ch).parse(input)?;
             input = i;
         }
         
@@ -35,23 +34,23 @@ where
     }
 }
 
-// pub fn string_no_case<I, E>(string: &str) -> impl Parser<I, Output = I, Error = E> + '_ 
-// where
-//     I: Input,
-//     I::Token: AsChar,
-//     E: Error<I>
-// {
-//     move |mut input: I| {
-//         let src = input.clone();
+pub fn string_no_case<I, E>(string: &str) -> impl Parser<I, Output = I, Error = E> + '_ 
+where
+    I: Input,
+    I::Token: AsChar,
+    E: Error<I>
+{
+    move |mut input: I| {
+        let src = input.clone();
 
-//         for ch in string.chars() {
-//             let (_, i) = char_no_case(ch).parse(input)?;
-//             input = i;
-//         }
+        for ch in string.chars() {
+            let (_, i) = sat(|t: &I::Token| t.as_char().eq_ignore_ascii_case(&ch)).parse(input)?;
+            input = i;
+        }
         
-//         return Ok((src.diff(&input), input))
-//     }
-// }
+        return Ok((src.diff(&input), input))
+    }
+}
 
 pub fn sat<I, F, E>(mut pred: F) -> impl Parser<I, Output = I::Token, Error = E> 
 where
@@ -195,6 +194,25 @@ where
 {
     char('\n').parse(input)
 }
+
+pub fn crlf<I, E>(input: I) -> ParseResult<I, I, E>
+where
+    I: Input,
+    I::Token: AsChar,
+    E: Error<I>
+{
+    string("\r\n").parse(input)
+}
+
+pub fn tab<I, E>(input: I) -> ParseResult<I::Token, I, E>
+where
+    I: Input,
+    I::Token: AsChar,
+    E: Error<I>
+{
+    sat(|t: &I::Token| t.as_char() == '\t').parse(input)
+}
+
 
 pub fn anychar<I, E>(input: I) -> ParseResult<I::Token, I, E> 
 where

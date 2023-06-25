@@ -1,6 +1,9 @@
 use std::marker::PhantomData;
 
-use crate::{Input, Error};
+use crate::{
+    Input, 
+    Error
+};
 
 pub trait Parser<I> {
     type Output;
@@ -59,7 +62,7 @@ pub trait Parser<I> {
     fn and_then<F, P>(self, f: F) -> AndThen<I, Self, F> 
     where
         P: Parser<I>,
-        F: FnOnce(Self::Output) -> P + Clone,
+        F: FnMut(Self::Output) -> P,
         Self: Sized
     {
         AndThen { parser: self, f, marker: PhantomData }
@@ -83,7 +86,6 @@ pub trait Parser<I> {
 
 }
 
-
 impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     type Output = O;
     type Error = E;
@@ -94,35 +96,11 @@ impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
 }
 
 #[derive(Clone)]
-pub struct Expect<I, P, E> {
-    parser: P,
-    message: String,
-    marker: PhantomData<(I, E)>
-}
-
-impl<I, P, E> Parser<I> for Expect<I, P, E> 
-where
-    I: Input,
-    P: Parser<I>,
-    E: Error<I>
-{
-    type Output = P::Output;
-    type Error = E;
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        match self.parser.parse(input) {
-            Ok(t) => Ok(t),
-            Err(_) => Err(Error::expect(&self.message))
-        }
-    }
-}
-
-#[derive(Clone)]
 pub struct Map<I, P, F> {
     parser: P,
     f: F,
     marker: PhantomData<I>
 }
-
 
 impl<I, P, F, R> Parser<I> for Map<I, P, F> 
 where
@@ -265,14 +243,14 @@ impl<I, A, B, F> Parser<I> for AndThen<I, A, F>
 where
     A: Parser<I>,
     B: Parser<I, Error = A::Error>,
-    F: FnOnce(A::Output) -> B + Clone
+    F: FnMut(A::Output) -> B
 {
     type Output = B::Output;
     type Error = B::Error;
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         let (o, i) = self.parser.parse(input)?;
-        (self.f.clone())(o).parse(i)
+        (self.f)(o).parse(i)
     }
 }
 
@@ -327,5 +305,28 @@ where
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         self.parser.parse(input)
+    }
+}
+
+#[derive(Clone)]
+pub struct Expect<I, P, E> {
+    parser: P,
+    message: String,
+    marker: PhantomData<(I, E)>
+}
+
+impl<I, P, E> Parser<I> for Expect<I, P, E> 
+where
+    I: Input,
+    P: Parser<I>,
+    E: Error<I>
+{
+    type Output = P::Output;
+    type Error = E;
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        match self.parser.parse(input) {
+            Ok(t) => Ok(t),
+            Err(_) => Err(Error::expect(&self.message))
+        }
     }
 }

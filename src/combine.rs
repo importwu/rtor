@@ -20,7 +20,6 @@ where
     }
 }
 
-
 pub fn between<I, L, M, R>(mut left: L, mut middle: M, mut right: R) -> impl Parser<I, Output = M::Output, Error = L::Error> 
 where
     I: Input,
@@ -53,7 +52,6 @@ where
     }
 }
 
-
 pub fn many<I, P>(mut parser: P) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
@@ -67,7 +65,6 @@ where
         Ok((o, input))
     }
 }
-
 
 pub fn many1<I, P>(mut parser: P) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
@@ -85,7 +82,6 @@ where
         
     }
 }
-
 
 pub fn skip_many<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error> 
 where 
@@ -148,7 +144,6 @@ where
         Ok((os, i))
     }
 }
-
 
 pub fn sepby1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
@@ -220,7 +215,6 @@ where
     }
 }
 
-
 pub fn peek<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = P::Error> 
 where
     I: Input,
@@ -245,7 +239,6 @@ where
         Ok((src.diff(&i), i))
     }
 }
-
 
 pub fn not<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error>
 where
