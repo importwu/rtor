@@ -45,7 +45,7 @@ fn main() {
         }
     "#;
     
-    let (json_value, _) = token(json).andl(token(eof)).parse(s.as_bytes()).unwrap();
+    let (json_value, _) = token(json).andl(token(eof)).parse(s).unwrap();
 
     println!("{:#?}", json_value);
 
@@ -62,7 +62,7 @@ enum JsonValue {
 }
 
 //https://www.json.org/json-en.html
-fn json<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
+fn json(input: &str) -> ParseResult<JsonValue, &str> {
     json_object
         .or(json_array)
         .or(json_number)
@@ -73,7 +73,7 @@ fn json<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
         .parse(input)
 }
 
-fn json_object<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_object(input: &str) -> ParseResult<JsonValue, &str> {
     between(
         char('{'), 
         sepby(
@@ -86,7 +86,7 @@ fn json_object<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     .parse(input)
 }
 
-fn json_array<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
+fn json_array(input: &str) -> ParseResult<JsonValue, &str> {
     between(
         char('['),
         sepby(token(json), token(char(','))), 
@@ -96,41 +96,40 @@ fn json_array<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> {
     .parse(input)
 }
 
-fn key<I: Input<Token = u8>>(input: I) -> ParseResult<String, I> {
+fn key(input: &str) -> ParseResult<String, &str> {
     between(
         char('"'), 
-        recognize(skip_many(character)).map(|i: I| String::from_utf8(i.tokens().collect()).unwrap()),
+        recognize(skip_many(character)).map(|i| i.to_owned()),
         char('"')
     )
     .parse(input)
 }
 
-fn character<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
+fn character(input: &str) -> ParseResult<(), &str> {
     char('\\').andr(escape)
         .or(not(char('"')).andr(anychar.ignore()))
         .parse(input)
 }
 
-fn escape<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
+fn escape(input: &str) -> ParseResult<(), &str> {
     oneof("\"\\/bfnrt").ignore()
         .or(char('u').andr(skip(hex, 4)))
         .parse(input)
 }
 
-fn json_number<I: Input<Token = u8>>(input: I) -> ParseResult<JsonValue, I> { 
+fn json_number(input: &str) -> ParseResult<JsonValue, &str> { 
     recognize(integer.andr(opt(char('.').andr(skip_many1(digit)))).andr(opt(exponent)))
-        .map(|i: I| {
-            let s = String::from_utf8(i.tokens().collect()).unwrap();
-            JsonValue::Number(s.parse::<f32>().unwrap())
+        .map(|i| {
+            JsonValue::Number(i.parse::<f32>().unwrap())
         })
         .parse(input)
 }
 
 
-fn integer<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
-    let int = |input: I| {
+fn integer(input: &str) -> ParseResult<(), &str> {
+    let int = |input| {
         char('0')
-            .or(sat(|ch| matches!(ch, b'1'..=b'9')))
+            .or(sat(|ch| matches!(ch, '1'..='9')))
             .andr(skip_many(digit))
             .parse(input)
     };
@@ -138,7 +137,7 @@ fn integer<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
     int.or(char('-').andr(int)).parse(input)
 }
 
-fn exponent<I: Input<Token = u8>>(input: I) -> ParseResult<(), I> {
+fn exponent(input: &str) -> ParseResult<(), &str> {
     char('E').or(char('e'))
         .andr(opt(char('+').or(char('-'))))
         .andr(skip_many1(digit))
