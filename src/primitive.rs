@@ -210,7 +210,7 @@ where
     I::Token: AsChar,
     E: Error<I>
 {
-    sat(|t: &I::Token| t.as_char() == '\t').parse(input)
+    char('\t').parse(input)
 }
 
 
@@ -257,10 +257,7 @@ where
     I: Input,
     E: Error<I>
 {
-    match input.next() {
-        None => Err(Error::unexpect(None)),
-        Some(t) => Err(Error::unexpect(Some(t)))
-    }
+    Err(Error::unexpect(input.next()))
 }
 
 pub fn pure<I, T, E>(t: T) -> impl Parser<I, Output = T, Error = E> 
