@@ -1,10 +1,6 @@
-use std::{
-    collections::HashMap, 
-    error::Error
-};
+use std::collections::HashMap;
 
 use rtor::{
-    Input, 
     Parser, 
     ParseResult,
     primitive::{
@@ -45,10 +41,9 @@ fn main() {
         }
     "#;
     
-    let (json_value, _) = token(json).andl(token(eof)).parse(s).unwrap();
+    let json_value = token(json).andl(token(eof)).parse(s);
 
     println!("{:#?}", json_value);
-
 }
 
 #[derive(Debug)]
@@ -97,51 +92,25 @@ fn json_array(input: &str) -> ParseResult<JsonValue, &str> {
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
+    let escape =  oneof("\"\\/bfnrt").ignore()
+        .or(char('u').andr(skip(hex, 4)));
+    let character = char('\\').andr(escape)
+        .or(not(char('"')).andl(anychar));
     between(
         char('"'), 
-        recognize(skip_many(character)).map(|i| i.to_owned()),
+        recognize(skip_many(character)).map(|i: &str| i.to_owned()),
         char('"')
     )
     .parse(input)
 }
 
-fn character(input: &str) -> ParseResult<(), &str> {
-    char('\\').andr(escape)
-        .or(not(char('"')).andr(anychar.ignore()))
-        .parse(input)
-}
-
-fn escape(input: &str) -> ParseResult<(), &str> {
-    oneof("\"\\/bfnrt").ignore()
-        .or(char('u').andr(skip(hex, 4)))
-        .parse(input)
-}
-
 fn json_number(input: &str) -> ParseResult<JsonValue, &str> { 
-    recognize(integer.andr(opt(char('.').andr(skip_many1(digit)))).andr(opt(exponent)))
-        .map(|i| {
-            JsonValue::Number(i.parse::<f32>().unwrap())
-        })
-        .parse(input)
-}
-
-
-fn integer(input: &str) -> ParseResult<(), &str> {
-    let int = |input| {
-        char('0')
-            .or(sat(|ch| matches!(ch, '1'..='9')))
-            .andr(skip_many(digit))
-            .parse(input)
-    };
-
-    int.or(char('-').andr(int)).parse(input)
-}
-
-fn exponent(input: &str) -> ParseResult<(), &str> {
-    char('E').or(char('e'))
+    let exponent = char('E').or(char('e'))
         .andr(opt(char('+').or(char('-'))))
-        .andr(skip_many1(digit))
+        .andr(skip_many1(digit));
+    let fraction = char('.').andr(skip_many1(digit));
+    let integer = char('0').or(sat(|ch| matches!(ch, '1'..='9')).andl(skip_many(digit)));
+    recognize(opt(char('-')).andr(integer).andr(opt(fraction)).andr(opt(exponent)))
+        .map(|i: &str| JsonValue::Number(i.parse::<f32>().unwrap()))
         .parse(input)
 }
-
-

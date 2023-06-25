@@ -212,7 +212,6 @@ where
     char('\n').parse(input)
 }
 
-
 pub fn anychar<I, E>(input: I) -> ParseResult<I::Token, I, E> 
 where
     I: Input,
@@ -240,7 +239,6 @@ where
     sat(move|t: &I::Token| !tokens.find_token(t))
 }
 
-
 pub fn eof<I, E>(mut input: I) ->  ParseResult<(), I, E>
 where
     I: Input,
@@ -262,7 +260,6 @@ where
         Some(t) => Err(Error::unexpect(Some(t)))
     }
 }
-
 
 pub fn pure<I, T, E>(t: T) -> impl Parser<I, Output = T, Error = E> 
 where
