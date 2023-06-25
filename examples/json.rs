@@ -12,7 +12,8 @@ use rtor::{
         }, 
         eof, 
         anychar,
-        char
+        char,
+        string
     }, 
     combine::{
         token, 
@@ -49,7 +50,7 @@ fn main() {
         "ytgqmlpld": "Y7wd"
     }
     "#;
-    
+
     let json_value = token(json).andl(token(eof)).parse(s);
 
     println!("{:#?}", json_value);
@@ -71,9 +72,9 @@ fn json(input: &str) -> ParseResult<JsonValue, &str> {
         .or(json_array)
         .or(json_number)
         .or(key.map(JsonValue::String))
-        .or("true".map(|_| JsonValue::Boolean(true)))
-        .or("false".map(|_| JsonValue::Boolean(false)))
-        .or("null".map(|_| JsonValue::Null))
+        .or(string("true").map(|_| JsonValue::Boolean(true)))
+        .or(string("false").map(|_| JsonValue::Boolean(false)))
+        .or(string("null").map(|_| JsonValue::Null))
         .parse(input)
 }
 
@@ -99,7 +100,7 @@ fn json_array(input: &str) -> ParseResult<JsonValue, &str> {
 
 fn key(input: &str) -> ParseResult<String, &str> {
     let escape =  oneof("\"\\/bfnrt").or(char('u').andl(skip(hex, 4)));
-    let character = char('\\').andr(escape).or(not(char('"')).andl(anychar));
+    let character = char('\\').andr(escape).or(not(char('"')).andr(anychar));
     between(
         char('"'), 
         recognize(skip_many(character)).map(|i: &str| i.to_owned()),

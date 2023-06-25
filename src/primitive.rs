@@ -17,22 +17,6 @@ where
     sat(move |t: &I::Token| t.as_char() == ch)
 }
 
-#[test]
-fn test() {
-    let r: Result<(char, &str), ParseError<&str>> = char('a').parse("bdf");
-
-    println!("{:?}", r)
-}
-
-pub fn char_no_case<I, E>(ch: char) -> impl Parser<I, Output = I::Token, Error = E> 
-where
-    I: Input,
-    I::Token: AsChar,
-    E: Error<I>
-{
-    sat(move |t: &I::Token| t.as_char().eq_ignore_ascii_case(&ch))
-}
-
 pub fn string<I, E>(string: &str) -> impl Parser<I, Output = I, Error = E> + '_ 
 where
     I: Input,
@@ -51,23 +35,23 @@ where
     }
 }
 
-pub fn string_no_case<I, E>(string: &str) -> impl Parser<I, Output = I, Error = E> + '_ 
-where
-    I: Input,
-    I::Token: AsChar,
-    E: Error<I>
-{
-    move |mut input: I| {
-        let src = input.clone();
+// pub fn string_no_case<I, E>(string: &str) -> impl Parser<I, Output = I, Error = E> + '_ 
+// where
+//     I: Input,
+//     I::Token: AsChar,
+//     E: Error<I>
+// {
+//     move |mut input: I| {
+//         let src = input.clone();
 
-        for ch in string.chars() {
-            let (_, i) = char_no_case(ch).parse(input)?;
-            input = i;
-        }
+//         for ch in string.chars() {
+//             let (_, i) = char_no_case(ch).parse(input)?;
+//             input = i;
+//         }
         
-        return Ok((src.diff(&input), input))
-    }
-}
+//         return Ok((src.diff(&input), input))
+//     }
+// }
 
 pub fn sat<I, F, E>(mut pred: F) -> impl Parser<I, Output = I::Token, Error = E> 
 where
@@ -271,17 +255,3 @@ where
         Ok((t.clone(), input))
     }
 }
-
-impl<I> Parser<I> for &str 
-where
-    I: Input,
-    I::Token: AsChar
-{
-    type Output = I;
-    type Error = ParseError<I>;
-
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        string(self).parse(input)
-    }
-}
-
