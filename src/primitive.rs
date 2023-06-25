@@ -17,6 +17,13 @@ where
     sat(move |t: &I::Token| t.as_char() == ch)
 }
 
+#[test]
+fn test() {
+    let r: Result<(char, &str), ParseError<&str>> = char('a').parse("bdf");
+
+    println!("{:?}", r)
+}
+
 pub fn char_no_case<I, E>(ch: char) -> impl Parser<I, Output = I::Token, Error = E> 
 where
     I: Input,
@@ -71,8 +78,8 @@ where
     move |mut input: I| {
         match input.next() {
             Some(t) if pred(&t) => Ok((t, input)),
-            Some(t) => Err(Error::from_token(Some(t))),
-            None => Err(Error::from_token(None))
+            Some(t) => Err(Error::unexpect(Some(t))),
+            None => Err(Error::unexpect(None))
         }
     }
 }
@@ -241,7 +248,7 @@ where
 {
     match input.next() {
         None => Ok(((), input)),
-        Some(t) => Err(Error::from_token(Some(t)))
+        Some(t) => Err(Error::unexpect(Some(t)))
     }
 }
 
@@ -251,8 +258,8 @@ where
     E: Error<I>
 {
     match input.next() {
-        None => Err(Error::from_token(None)),
-        Some(t) => Err(Error::from_token(Some(t)))
+        None => Err(Error::unexpect(None)),
+        Some(t) => Err(Error::unexpect(Some(t)))
     }
 }
 
@@ -268,28 +275,16 @@ where
     }
 }
 
-impl<I> Parser<I> for char 
-where 
-    I: Input,
-    I::Token: AsChar
-{
-    type Output = I::Token;
-    type Error = ParseError<I::Token>;
-
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        char(*self).parse(input)
-    }
-}
-
 impl<I> Parser<I> for &str 
 where
     I: Input,
     I::Token: AsChar
 {
     type Output = I;
-    type Error = ParseError<I::Token>;
+    type Error = ParseError<I>;
 
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         string(self).parse(input)
     }
 }
+

@@ -256,7 +256,7 @@ where
     move |mut input: I| {
         match parser.parse(input.clone()) {
             Err(_) => Ok(((), input)),
-            Ok(_) => Err(Error::from_token(input.next()))
+            Ok(_) => Err(Error::unexpect(input.next()))
         }
     }
 }

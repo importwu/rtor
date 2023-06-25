@@ -77,6 +77,10 @@ pub trait Parser<I> {
         Cloned { parser: self.clone(), marker: PhantomData }
     }
 
+    fn expect(self, message: &str) -> Expect<I, Self, Self::Error> where Self: Sized {
+        Expect { parser: self, message: message.to_owned(), marker: PhantomData }
+    }
+
 }
 
 
@@ -89,6 +93,28 @@ impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     }
 }
 
+#[derive(Clone)]
+pub struct Expect<I, P, E> {
+    parser: P,
+    message: String,
+    marker: PhantomData<(I, E)>
+}
+
+impl<I, P, E> Parser<I> for Expect<I, P, E> 
+where
+    I: Input,
+    P: Parser<I>,
+    E: Error<I>
+{
+    type Output = P::Output;
+    type Error = E;
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        match self.parser.parse(input) {
+            Ok(t) => Ok(t),
+            Err(_) => Err(Error::expect(&self.message))
+        }
+    }
+}
 
 #[derive(Clone)]
 pub struct Map<I, P, F> {
@@ -155,9 +181,9 @@ where
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         match self.first.parse(input.clone()) {
             Ok(t) => Ok(t),
-            Err(e1) => match self.second.parse(input) {
+            Err(_) => match self.second.parse(input) {
                 Ok(t) => Ok(t),
-                Err(e2) => Err(e1.merge(e2))
+                Err(e) => Err(e)
             }
         }
     }
