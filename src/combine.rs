@@ -3,7 +3,6 @@ use crate::{
     Parser, 
     Error, 
     AsChar, 
-    ParseError, 
     iter::Many, 
     primitive::ascii::space, 
 };
@@ -279,11 +278,12 @@ where
     }
 }
 
-pub fn token<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = ParseError<I::Token>> 
+pub fn token<I, P, E>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = E> 
 where
     I: Input,
     I::Token: AsChar,
-    P: Parser<I, Error = ParseError<I::Token>>
+    P: Parser<I, Error = E>,
+    E: Error<I>
 {
     move |input: I| {
         let (_, i) = skip_many(space).parse(input)?;

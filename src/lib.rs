@@ -19,7 +19,7 @@ pub use self::{
     input::Input,
 };
 
-pub type ParseResult<O, I> = Result<(O, I), ParseError<<I as Input>::Token>>;
+pub type ParseResult<O, I, E = ParseError<<I as Input>::Token>> = Result<(O, I), E>;
 
 pub trait AsChar {
     fn as_char(&self) -> char;

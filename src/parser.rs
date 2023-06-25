@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::Input;
+use crate::{Input, Error};
 
 pub trait Parser<I> {
     type Output;
@@ -146,7 +146,8 @@ impl<I, A, B> Parser<I> for Or<I, A, B>
 where
     I: Input, 
     A: Parser<I>,
-    B: Parser<I, Output = A::Output, Error = A::Error>
+    B: Parser<I, Output = A::Output, Error = A::Error>,
+    A::Error: Error<I>
 {
     type Output = A::Output;
     type Error = A::Error;
@@ -154,9 +155,9 @@ where
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         match self.first.parse(input.clone()) {
             Ok(t) => Ok(t),
-            Err(_) => match self.second.parse(input) {
+            Err(e1) => match self.second.parse(input) {
                 Ok(t) => Ok(t),
-                Err(e) => Err(e)
+                Err(e2) => Err(e1.merge(e2))
             }
         }
     }
