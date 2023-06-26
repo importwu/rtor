@@ -159,9 +159,9 @@ where
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         match self.first.parse(input.clone()) {
             Ok(t) => Ok(t),
-            Err(_) => match self.second.parse(input) {
+            Err(e1) => match self.second.parse(input) {
                 Ok(t) => Ok(t),
-                Err(e) => Err(e)
+                Err(e2) => Err(e1.merge(e2))
             }
         }
     }

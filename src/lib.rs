@@ -1,13 +1,8 @@
 mod parser;
-
 mod error;
-
 pub mod primitive;
-
 pub mod combine;
-
 pub mod iter;
-
 mod input;
 
 pub use self::{

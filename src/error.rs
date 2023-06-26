@@ -7,17 +7,15 @@ use crate::Input;
 
 pub trait Error<I: Input> {
     fn unexpect(token: Option<I::Token>) -> Self;
-
     fn expect(message: &str) -> Self;
+    fn merge(self, other: Self) -> Self;
 }
-
 
 #[derive(Debug)]
 pub enum ParseError<I: Input> {
     Unexpected(Option<I::Token>),
     Expected(String)
 }
-
 
 impl<I: Input> Error<I> for ParseError<I> {
     fn unexpect(token: Option<I::Token>) -> Self {
@@ -26,6 +24,10 @@ impl<I: Input> Error<I> for ParseError<I> {
 
     fn expect(message: &str) -> Self {
         Self::Expected(message.to_owned())
+    }
+
+    fn merge(self, other: Self) -> Self {
+        other
     }
 }
 
