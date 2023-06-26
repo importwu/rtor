@@ -26,11 +26,11 @@ where
         let src = input.clone();
 
         for ch in string.chars() {
-            let (_, i) = sat(|t: &I::Token| t.as_char() == ch).parse(input)?;
+            let (_, i) = char(ch).parse(input)?;
             input = i;
         }
         
-        return Ok((src.diff(&input), input))
+        Ok((src.diff(&input), input))
     }
 }
 
@@ -48,7 +48,7 @@ where
             input = i;
         }
         
-        return Ok((src.diff(&input), input))
+        Ok((src.diff(&input), input))
     }
 }
 
@@ -61,10 +61,93 @@ where
     move |mut input: I| {
         match input.next() {
             Some(t) if pred(&t) => Ok((t, input)),
-            Some(t) => Err(Error::unexpect(Some(t))),
-            None => Err(Error::unexpect(None))
+            Some(t) => Err(Error::unexpect(input, Some(t))),
+            None => Err(Error::unexpect(input, None))
         }
     }
+}
+
+pub fn newline<I, E>(input: I) -> ParseResult<I::Token, I, E>
+where
+    I: Input,
+    I::Token: AsChar,
+    E: Error<I>
+{
+    char('\n').parse(input)
+}
+
+pub fn crlf<I, E>(input: I) -> ParseResult<I, I, E>
+where
+    I: Input,
+    I::Token: AsChar,
+    E: Error<I>
+{
+    string("\r\n").parse(input)
+}
+
+pub fn tab<I, E>(input: I) -> ParseResult<I::Token, I, E>
+where
+    I: Input,
+    I::Token: AsChar,
+    E: Error<I>
+{
+    char('\t').parse(input)
+}
+
+pub fn anychar<I, E>(input: I) -> ParseResult<I::Token, I, E> 
+where
+    I: Input,
+    I::Token: AsChar,
+    E: Error<I>
+{
+    sat(|_| true).parse(input)
+}
+
+pub fn oneof<I, F, E>(tokens: F) -> impl Parser<I, Output = I::Token, Error = E> 
+where
+    I: Input,
+    F: FindToken<I::Token>,
+    E: Error<I>
+{
+    sat(move|t: &I::Token| tokens.find_token(t))
+}
+
+pub fn noneof<I, F, E>(tokens: F) -> impl Parser<I, Output = I::Token, Error = E> 
+where
+    I: Input,
+    F: FindToken<I::Token>,
+    E: Error<I>
+{
+    sat(move|t: &I::Token| !tokens.find_token(t))
+}
+
+pub fn eof<I, E>(mut input: I) ->  ParseResult<(), I, E>
+where
+    I: Input,
+    E: Error<I>
+{
+    match input.next() {
+        None => Ok(((), input)),
+        Some(t) => Err(Error::unexpect(input, Some(t)))
+    }
+}
+
+pub fn error<I, E>(mut input: I) -> ParseResult<(), I, E> 
+where
+    I: Input,
+    E: Error<I>
+{
+    let t = input.next();
+    Err(Error::unexpect(input, t))
+}
+
+pub fn pure<I, T, E>(t: T) -> impl Parser<I, Output = T, Error = E> 
+where
+    I: Input,
+    T: Clone,
+    E: Error<I>
+{
+    move|input: I| Ok((t.clone(), input))
 }
 
 pub mod ascii {
@@ -184,89 +267,4 @@ pub mod unicode {
         sat(|c: &I::Token| c.as_char().is_whitespace()).parse(input)
     }
 
-}
-
-pub fn newline<I, E>(input: I) -> ParseResult<I::Token, I, E>
-where
-    I: Input,
-    I::Token: AsChar,
-    E: Error<I>
-{
-    char('\n').parse(input)
-}
-
-pub fn crlf<I, E>(input: I) -> ParseResult<I, I, E>
-where
-    I: Input,
-    I::Token: AsChar,
-    E: Error<I>
-{
-    string("\r\n").parse(input)
-}
-
-pub fn tab<I, E>(input: I) -> ParseResult<I::Token, I, E>
-where
-    I: Input,
-    I::Token: AsChar,
-    E: Error<I>
-{
-    char('\t').parse(input)
-}
-
-
-pub fn anychar<I, E>(input: I) -> ParseResult<I::Token, I, E> 
-where
-    I: Input,
-    I::Token: AsChar,
-    E: Error<I>
-{
-    sat(|_| true).parse(input)
-}
-
-pub fn oneof<I, F, E>(tokens: F) -> impl Parser<I, Output = I::Token, Error = E> 
-where
-    I: Input,
-    F: FindToken<I::Token>,
-    E: Error<I>
-{
-    sat(move|t: &I::Token| tokens.find_token(t))
-}
-
-pub fn noneof<I, F, E>(tokens: F) -> impl Parser<I, Output = I::Token, Error = E> 
-where
-    I: Input,
-    F: FindToken<I::Token>,
-    E: Error<I>
-{
-    sat(move|t: &I::Token| !tokens.find_token(t))
-}
-
-pub fn eof<I, E>(mut input: I) ->  ParseResult<(), I, E>
-where
-    I: Input,
-    E: Error<I>
-{
-    match input.next() {
-        None => Ok(((), input)),
-        Some(t) => Err(Error::unexpect(Some(t)))
-    }
-}
-
-pub fn error<I, E>(mut input: I) -> ParseResult<(), I, E> 
-where
-    I: Input,
-    E: Error<I>
-{
-    Err(Error::unexpect(input.next()))
-}
-
-pub fn pure<I, T, E>(t: T) -> impl Parser<I, Output = T, Error = E> 
-where
-    I: Input,
-    T: Clone,
-    E: Error<I>
-{
-    move|input: I| {
-        Ok((t.clone(), input))
-    }
 }

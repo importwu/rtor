@@ -2,7 +2,7 @@ mod parser;
 mod error;
 pub mod primitive;
 pub mod combine;
-pub mod iter;
+mod iter;
 mod input;
 
 pub use self::{
@@ -11,7 +11,11 @@ pub use self::{
         Error
     },
     parser::Parser,
-    input::Input,
+    input::{
+        Input,
+        Location,
+        LocatedInput
+    },
 };
 
 pub type ParseResult<O, I, E = ParseError<I>> = Result<(O, I), E>;

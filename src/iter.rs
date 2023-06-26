@@ -3,23 +3,35 @@ use crate::{
     Parser
 };
 
-pub struct Many<'a, I, P> {
-    input: &'a mut I,
+#[derive(Debug)]
+pub struct Iter<I, P, E> {
+    input: I,
     parser: P,
-    flag: bool
+    error: Option<E>,
 }
 
-impl<'a, I, P> Many<'a, I, P> {
-    pub fn new(input: &'a mut I, parser: P) -> Self {
+impl<I, P, E> Iter<I, P, E> {
+    pub fn new(input: I, parser: P) -> Self {
         Self { 
             input, 
             parser, 
-            flag: false 
+            error: None,
+        }
+    }
+
+    pub fn get(self) -> I {
+        self.input
+    }
+
+    pub fn try_get(self) -> Result<I, E> {
+        match self.error {
+            None => Ok(self.input),
+            Some(e) => Err(e)
         }
     }
 }
 
-impl<'a, I, P> Iterator for Many<'a, I, P> 
+impl<I, P> Iterator for &mut Iter<I, P, P::Error> 
 where
     I: Input,
     P: Parser<I>
@@ -27,15 +39,15 @@ where
     type Item = P::Output;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.flag { return None }
+        if self.error.is_some() { return None }
 
         match self.parser.parse(self.input.clone()) {
             Ok((o, i)) => {
-                *self.input = i;
+                self.input = i;
                 Some(o)
             }
-            Err(_) => {
-                self.flag = true;
+            Err(e) => {
+                self.error = Some(e);
                 None
             }
         }

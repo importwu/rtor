@@ -4,6 +4,8 @@ use std::{
     iter::Cloned
 };
 
+use crate::AsChar;
+
 pub trait Input: Clone {
     type Token: Clone;
     type Tokens: Iterator<Item = Self::Token>;
@@ -15,6 +17,10 @@ pub trait Input: Clone {
     fn diff(&self, other: &Self) -> Self;
 
     fn tokens(&self) -> Self::Tokens;
+
+    fn parser_iter<P, E>(self, parser: P) -> crate::iter::Iter<Self, P, E> {
+        crate::iter::Iter::new(self, parser)
+    }
 }
 
 impl<'a> Input for &'a str {
@@ -67,3 +73,83 @@ impl<'a, T: Clone> Input for &'a [T] {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Location {
+    line: u64,
+    column: u64,
+}
+
+impl Location {
+    pub fn new() -> Self {
+        Self {
+            line: 1,
+            column: 1,
+        }
+    }
+
+    pub fn advance(&mut self, ch: char) {
+        if ch == '\n' {
+            self.line += 1;
+            self.column = 1;
+        }else {
+            self.column += 1;
+        }
+    }
+
+    pub fn line(&self) -> u64 {
+        self.line
+    }
+
+    pub fn column(&self) -> u64 {
+        self.column
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LocatedInput<I> {
+    inner: I,
+    location: Location
+}
+
+impl<I> LocatedInput<I> {
+    pub fn new(inner: I) -> Self {
+        Self {
+            inner,
+            location: Location::new()
+        }
+    }
+
+    pub fn location(&self) -> Location {
+        self.location
+    }
+}
+
+impl<I> Input for LocatedInput<I> 
+where 
+    I: Input,
+    I::Token: AsChar
+{
+    type Token = I::Token;
+    type Tokens = I::Tokens;
+
+    fn next(&mut self) -> Option<Self::Token> {
+        let t = self.inner.next()?;
+        self.location.advance(t.as_char());
+        Some(t)
+    }
+
+    fn peek(&mut self) -> Option<Self::Token> {
+        self.inner.peek()
+    }
+
+    fn diff(&self, other: &Self) -> Self {
+        LocatedInput { 
+            inner: self.inner.diff(&other.inner), 
+            location: self.location
+        }
+    }
+
+    fn tokens(&self) -> Self::Tokens {
+        self.inner.tokens()
+    }
+}

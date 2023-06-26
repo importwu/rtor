@@ -27,41 +27,24 @@ pub trait Parser<I> {
         MapErr { parser: self, f, marker: PhantomData }
     }
 
-    fn or<P>(self, second: P) -> Or<I, Self, P> 
-    where
-        P: Parser<I>,
-        Self: Sized
-    {
+    fn or<P>(self, second: P) -> Or<I, Self, P> where Self: Sized {
         Or { first: self, second, marker: PhantomData }
     }
 
-    fn andl<P>(self, second: P) -> AndL<I, Self, P> 
-    where
-        P: Parser<I>,
-        Self: Sized
-    {
+    fn andl<P>(self, second: P) -> AndL<I, Self, P> where Self: Sized {
         AndL { first: self, second, marker: PhantomData }
     }
 
-    fn andr<P>(self, second: P) -> AndR<I, Self, P> 
-    where
-        P: Parser<I>,
-        Self: Sized
-    {
+    fn andr<P>(self, second: P) -> AndR<I, Self, P> where Self: Sized {
         AndR { first: self, second, marker: PhantomData }
     }
 
-    fn and<P>(self, second: P) -> And<I, Self, P> 
-    where
-        P: Parser<I>,
-        Self: Sized
-    {
+    fn and<P>(self, second: P) -> And<I, Self, P> where Self: Sized {
         And { first: self, second, marker: PhantomData }
     }
 
     fn and_then<F, P>(self, f: F) -> AndThen<I, Self, F> 
     where
-        P: Parser<I>,
         F: FnMut(Self::Output) -> P,
         Self: Sized
     {
@@ -324,9 +307,9 @@ where
     type Output = P::Output;
     type Error = E;
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        match self.parser.parse(input) {
+        match self.parser.parse(input.clone()) {
             Ok(t) => Ok(t),
-            Err(_) => Err(Error::expect(&self.message))
+            Err(_) => Err(Error::expect(input, &self.message))
         }
     }
 }
