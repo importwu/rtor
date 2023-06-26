@@ -3,4 +3,5 @@ Parser Combinator Library
 
 # Example
 
-[json parser](https://github.com/importwu/rtor/blob/main/examples/json.rs)
+1. [json](https://github.com/importwu/rtor/blob/main/examples/json.rs)
+2. [airthmetic](https://github.com/importwu/rtor/blob/main/examples/airthmetic.rs)

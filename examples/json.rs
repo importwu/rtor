@@ -61,7 +61,7 @@ enum JsonValue {
     Object(HashMap<String, JsonValue>),
     Array(Vec<JsonValue>),
     String(String),
-    Number(f32),
+    Number(f64),
     Boolean(bool),
     Null
 }
@@ -114,6 +114,6 @@ fn json_number(input: &str) -> ParseResult<JsonValue, &str> {
     let fraction = char('.').andr(skip_many1(digit));
     let integer = char('0').or(sat(|ch| matches!(ch, '1'..='9')).andl(skip_many(digit)));
     recognize(opt(char('-')).andr(integer).andr(opt(fraction)).andr(opt(exponent)))
-        .map(|i: &str| JsonValue::Number(i.parse::<f32>().unwrap()))
+        .map(|i: &str| JsonValue::Number(i.parse::<f64>().unwrap()))
         .parse(input)
 }
