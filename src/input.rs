@@ -1,7 +1,8 @@
 use std::{
     str::Chars, 
     slice::Iter, 
-    iter::Cloned
+    iter::Cloned,
+    ops::Deref
 };
 
 use crate::AsChar;
@@ -121,6 +122,13 @@ impl<I> LocatedInput<I> {
 
     pub fn location(&self) -> Location {
         self.location
+    }
+}
+
+impl<I> Deref for LocatedInput<I> {
+    type Target = I;
+    fn deref(&self) -> &Self::Target {
+        &self.inner
     }
 }
 
