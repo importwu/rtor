@@ -33,7 +33,7 @@ impl<I: Input> Error<I> for ParseError<I> {
 
 impl<I> fmt::Display for ParseError<I> 
 where
-    I: Input + fmt::Display,
+    I: Input,
     I::Token: fmt::Display
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

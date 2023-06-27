@@ -3,7 +3,6 @@ use crate::{
     Parser, 
     Error, 
     AsChar, 
-    iter::Iter,
     primitive::ascii::space, 
 };
 
