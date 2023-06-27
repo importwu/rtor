@@ -61,8 +61,8 @@ where
     move |mut input: I| {
         match input.next() {
             Some(t) if pred(&t) => Ok((t, input)),
-            Some(t) => Err(Error::unexpect(input, Some(t))),
-            None => Err(Error::unexpect(input, None))
+            Some(t) => Err(Error::unexpect(Some(t))),
+            None => Err(Error::unexpect(None))
         }
     }
 }
@@ -128,7 +128,7 @@ where
 {
     match input.next() {
         None => Ok(((), input)),
-        Some(t) => Err(Error::unexpect(input, Some(t)))
+        Some(t) => Err(Error::unexpect(Some(t)))
     }
 }
 
@@ -137,8 +137,7 @@ where
     I: Input,
     E: Error<I>
 {
-    let t = input.next();
-    Err(Error::unexpect(input, t))
+    Err(Error::unexpect(input.next()))
 }
 
 pub fn pure<I, T, E>(t: T) -> impl Parser<I, Output = T, Error = E> 

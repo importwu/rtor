@@ -309,7 +309,7 @@ where
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         match self.parser.parse(input.clone()) {
             Ok(t) => Ok(t),
-            Err(_) => Err(Error::expect(input, &self.message))
+            Err(_) => Err(Error::expect(&self.message))
         }
     }
 }

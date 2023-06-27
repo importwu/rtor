@@ -57,8 +57,8 @@ where
 {
     move |input: I| {
         let mut it = input.parser_iter(parser.ref_mut());
-        let o = it.collect();
-        Ok((o, it.get()))
+        let os = it.collect();
+        Ok((os, it.get()))
     }
 }
 
@@ -223,10 +223,7 @@ where
     move |mut input: I| {
         match parser.parse(input.clone()) {
             Err(_) => Ok(((), input)),
-            Ok(_) => {
-                let t = input.next();
-                Err(Error::unexpect(input, t))
-            }
+            Ok(_) => Err(Error::unexpect(input.next()))
         }
     }
 }
