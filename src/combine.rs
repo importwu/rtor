@@ -256,3 +256,17 @@ where
         parser.parse(i)
     }
 }
+
+pub fn many_till<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = Vec<A::Output>, Error = A::Error> 
+where
+    I: Input,
+    A: Parser<I>,
+    A::Error: Error<I>,
+    B: Parser<I, Error = A::Error>
+{
+    move |input: I| {
+         let mut it = input.parser_iter(not(pred.ref_mut()).andr(parser.ref_mut()));
+         let os = it.collect();
+         Ok((os, it.get()))
+    }
+}

@@ -66,21 +66,17 @@ fn expr<'a>(precedence: u8) -> impl Parser<&'a str, Output = Expr, Error = Parse
             .or(between(char('('), expr(0), char(')'))))
             .parse(input)?;
 
-        loop {
-            if let Ok(((op, next_precedence), i)) = token(operator).parse(input.clone()) {
-                if next_precedence <= precedence { break }
-                let (right, i) = expr(next_precedence).parse(i)?;
-                left = match op {
-                    '+' => Expr::Plus(Box::new(left), Box::new(right)),
-                    '-' => Expr::Minus(Box::new(left), Box::new(right)),
-                    '*' => Expr::Multiply(Box::new(left), Box::new(right)),
-                    '/' => Expr::Divide(Box::new(left), Box::new(right)),
-                    _ => unreachable!()
-                };
-                input = i;
-                continue;
-            }
-            break;
+        while let Ok(((op, next_precedence), i)) = token(operator).parse(input.clone()) {
+            if next_precedence <= precedence { break }
+            let (right, i) = expr(next_precedence).parse(i)?;
+            left = match op {
+                '+' => Expr::Plus(Box::new(left), Box::new(right)),
+                '-' => Expr::Minus(Box::new(left), Box::new(right)),
+                '*' => Expr::Multiply(Box::new(left), Box::new(right)),
+                '/' => Expr::Divide(Box::new(left), Box::new(right)),
+                _ => unreachable!()
+            };
+            input = i;
         }
 
         Ok((left, input))

@@ -50,6 +50,22 @@ pub trait Parser<I> {
     {
         AndThen { parser: self, f, marker: PhantomData }
     }
+
+    fn chainl1<P>(self, op: P) -> Chainl1<I, Self, P> where Self: Sized {
+        Chainl1 { parser: self, op, marker: PhantomData }
+    }
+
+    fn chainl<P>(self, op: P, value: Self::Output) -> Chainl<I, Self, P> where Self: Sized {
+        Chainl { parser: self, op, value, marker: PhantomData }
+    }
+
+    fn chainr1<P>(self, op: P) -> Chainr1<I, Self, P> where Self: Sized {
+        Chainr1 { parser: self, op, marker: PhantomData }
+    }
+
+    fn chainr<P>(self, op: P, value: Self::Output) -> Chainr<I, Self, P> where Self: Sized {
+        Chainr { parser: self, op, value, marker: PhantomData }
+    }
     
     fn ignore(self) -> Ignore<I, Self> where Self: Sized {
         Ignore { parser: self, marker: PhantomData }
@@ -306,10 +322,161 @@ where
 {
     type Output = P::Output;
     type Error = E;
+
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         match self.parser.parse(input.clone()) {
             Ok(t) => Ok(t),
             Err(_) => Err(Error::expect(&self.message))
         }
     }
+}
+
+#[derive(Clone)]
+pub struct Chainl1<I, A, B> {
+    parser: A,
+    op: B,
+    marker: PhantomData<I>
+}
+
+impl<I, A, B, F> Parser<I> for Chainl1<I, A, B> 
+where
+    I: Input,
+    A: Parser<I>,
+    B: Parser<I, Output = F, Error = A::Error>,
+    F: Fn(A::Output, A::Output) -> A::Output
+{
+    type Output = A::Output;
+    type Error = A::Error;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (mut left, mut input) = self.parser.parse(input)?;
+        while let Ok((f, i)) = self.op.parse(input.clone()) {
+            let (right, i) = self.parser.parse(i)?;
+            left = f(left, right);
+            input = i;
+        }
+        Ok((left, input))
+    }
+}  
+
+#[derive(Clone)]
+pub struct Chainl<I, A: Parser<I>, B> {
+    parser: A,
+    op: B,
+    value: A::Output,
+    marker: PhantomData<I>
+}
+
+impl<I, A, B, F> Parser<I> for Chainl<I, A, B> 
+where
+    I: Input,
+    A: Parser<I>,
+    A::Output: Clone,
+    B: Parser<I, Output = F, Error = A::Error>,
+    F: Fn(A::Output, A::Output) -> A::Output
+{
+    type Output = A::Output;
+    type Error = A::Error;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (mut left, mut input) = match self.parser.parse(input.clone()) {
+            Ok(t) => t,
+            Err(_) => return Ok((self.value.clone(), input))
+        };
+        while let Ok((f, i)) = self.op.parse(input.clone()) {
+            let (right, i) = self.parser.parse(i)?;
+            left = f(left, right);
+            input = i;
+        }
+        Ok((left, input))
+    }
+}  
+
+#[derive(Clone)]
+pub struct Chainr1<I, A, B> {
+    parser: A,
+    op: B,
+    marker: PhantomData<I>
+}
+
+impl<I, A, B, F> Parser<I> for Chainr1<I, A, B> 
+where
+    I: Input,
+    A: Parser<I>,
+    B: Parser<I, Output = F, Error = A::Error>,
+    F: Fn(A::Output, A::Output) -> A::Output
+{
+    type Output = A::Output;
+    type Error = A::Error;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (mut left, mut input) = self.parser.parse(input)?;
+        while let Ok((f, i)) = self.op.parse(input.clone()) {
+            let (right, i) = self.parse(i)?;
+            left = f(left, right);
+            input = i;
+        }
+        Ok((left, input))
+    }
+}  
+
+#[derive(Clone)]
+pub struct Chainr<I, A: Parser<I>, B> {
+    parser: A,
+    op: B,
+    value: A::Output,
+    marker: PhantomData<I>
+}
+
+impl<I, A, B, F> Parser<I> for Chainr<I, A, B> 
+where
+    I: Input,
+    A: Parser<I>,
+    A::Output: Clone,
+    B: Parser<I, Output = F, Error = A::Error>,
+    F: Fn(A::Output, A::Output) -> A::Output
+{
+    type Output = A::Output;
+    type Error = A::Error;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (mut left, mut input) = match self.parser.parse(input.clone()) {
+            Ok(t) => t,
+            Err(_) => return Ok((self.value.clone(), input))
+        };
+        while let Ok((f, i)) = self.op.parse(input.clone()) {
+            let (right, i) = self.parse(i)?;
+            left = f(left, right);
+            input = i;
+        }
+        Ok((left, input))
+    }
+}  
+
+#[derive(Debug, Clone)]
+enum Expr {
+    Value(char),
+    Bin {
+        op: char,
+        left: Box<Expr>,
+        right: Box<Expr>
+    }
+}
+
+use super::primitive::char;
+use super::error::ParseError;
+
+#[test]
+fn test() {
+    let r: Result<(Expr, &str), ParseError<&str>> = char('1')
+        .or(char('2'))
+        .or(char('3'))
+        .map(Expr::Value)
+        .chainl(|i| {
+            let (v, i) = char('+').or(char('-')).parse(i)?;
+            Ok((move|a: Expr, b: Expr| Expr::Bin { op: v, left: Box::new(a), right: Box::new(b) }, i))
+        }, Expr::Value('0'))
+        .parse("1+2+3");
+
+    println!("{:#?}", r);
 }
