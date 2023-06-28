@@ -16,6 +16,7 @@ pub use self::{
         Location,
         LocatedInput
     },
+    iter::ParserIter
 };
 
 pub type ParseResult<O, I, E = ParseError<I>> = Result<(O, I), E>;

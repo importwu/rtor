@@ -1,9 +1,15 @@
+use std::ops::{
+    RangeBounds,
+    Bound
+};
+
 use crate::{
     Input, 
     Parser, 
     Error, 
     AsChar, 
     primitive::ascii::space, 
+    ParserIter, 
 };
 
 pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
@@ -55,7 +61,7 @@ where
     P: Parser<I>,
 {
     move |input: I| {
-        let mut it = input.parser_iter(parser.ref_mut());
+        let mut it = ParserIter::new(input, parser.ref_mut());
         let os = it.collect();
         Ok((os, it.get()))
     }
@@ -69,9 +75,51 @@ where
     move |input: I| {
         let (o, i) = parser.parse(input)?;
         let mut os = vec![o];
-        let mut it = i.parser_iter(parser.ref_mut());
+        let mut it = ParserIter::new(i, parser.ref_mut());
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
+    }
+}
+
+pub fn many_till<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = Vec<A::Output>, Error = A::Error> 
+where
+    I: Input,
+    A: Parser<I>,
+    A::Error: Error<I>,
+    B: Parser<I, Error = A::Error>
+{
+    move |input: I| {
+        let mut it = ParserIter::new(input, not(pred.ref_mut()).andr(parser.ref_mut()));
+        let os = it.collect();
+        Ok((os, it.get()))
+    }
+}
+
+pub fn many_till1<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = Vec<A::Output>, Error = A::Error> 
+where
+    I: Input,
+    A: Parser<I>,
+    A::Error: Error<I>,
+    B: Parser<I, Error = A::Error>
+{
+    move |input: I| {
+        let (o, i) = not(pred.ref_mut()).andr(parser.ref_mut()).parse(input)?;
+        let mut os = vec![o];
+        let mut it = ParserIter::new(i, not(pred.ref_mut()).andr(parser.ref_mut()));
+        it.for_each(|o| os.push(o));
+        Ok((os, it.get()))
+    }
+}
+
+pub fn count<I, P>(mut parser: P, n: usize) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+where 
+    I: Input,
+    P: Parser<I>
+{
+    move |input: I| {
+        let mut it = ParserIter::new(input, parser.ref_mut());
+        let os = it.take(n).collect();
+        Ok((os, it.try_get()?))
     }
 }
 
@@ -81,7 +129,7 @@ where
     P: Parser<I>
 {
     move |input: I| {
-        let mut it = input.parser_iter(parser.ref_mut());
+        let mut it = ParserIter::new(input, parser.ref_mut());
         it.for_each(|_| ());
         Ok(((), it.get()))
     }
@@ -94,7 +142,36 @@ where
 {
     move |input: I| {
         let (_, i) = parser.parse(input)?;
-        let mut it = i.parser_iter(parser.ref_mut());
+        let mut it = ParserIter::new(i, parser.ref_mut());
+        it.for_each(|_| ());
+        Ok(((), it.get()))
+    }
+}
+
+pub fn skip_till<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = (), Error = A::Error> 
+where
+    I: Input,
+    A: Parser<I>,
+    A::Error: Error<I>,
+    B: Parser<I, Error = A::Error>
+{
+    move |input: I| {
+        let mut it = ParserIter::new(input, not(pred.ref_mut()).andr(parser.ref_mut()));
+        it.for_each(|_| ());
+        Ok(((), it.get()))
+    }
+}
+
+pub fn skip_till1<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = (), Error = A::Error> 
+where
+    I: Input,
+    A: Parser<I>,
+    A::Error: Error<I>,
+    B: Parser<I, Error = A::Error>
+{
+    move |input: I| {
+        let (_, i) = not(pred.ref_mut()).andr(parser.ref_mut()).parse(input)?;
+        let mut it = ParserIter::new(i, not(pred.ref_mut()).andr(parser.ref_mut()));
         it.for_each(|_| ());
         Ok(((), it.get()))
     }
@@ -106,7 +183,7 @@ where
     P: Parser<I>
 {
     move |input: I| {
-        let mut it = input.parser_iter(parser.ref_mut());
+        let mut it = ParserIter::new(input, parser.ref_mut());
         it.take(n).for_each(|_| ());
         Ok(((), it.try_get()?))
     }
@@ -123,7 +200,7 @@ where
             Ok((o, i)) => (vec![o], i),
             Err(_) => return Ok((vec![], input))
         };
-        let mut it = i.parser_iter(sep.ref_mut().andr(parser.ref_mut()));
+        let mut it = ParserIter::new(i, sep.ref_mut().andr(parser.ref_mut()));
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -138,7 +215,7 @@ where
     move |input: I| {
         let (o, i) = parser.parse(input)?;
         let mut os = vec![o];
-        let mut it = i.parser_iter(sep.ref_mut().andr(parser.ref_mut()));
+        let mut it = ParserIter::new(i, sep.ref_mut().andr(parser.ref_mut()));
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -155,7 +232,7 @@ where
             Ok((o, i)) => (vec![o], i),
             Err(_) => return Ok((vec![], input))
         };
-        let mut it = i.parser_iter(parser.ref_mut().andl(sep.ref_mut()));
+        let mut it = ParserIter::new(i, parser.ref_mut().andl(sep.ref_mut()));
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -170,21 +247,9 @@ where
     move |input: I| { 
         let (o, i) = parser.ref_mut().andl(sep.ref_mut()).parse(input.clone())?;
         let mut os = vec![o];
-        let mut it = i.parser_iter(parser.ref_mut().andl(sep.ref_mut()));
+        let mut it = ParserIter::new(i, parser.ref_mut().andl(sep.ref_mut()));
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
-    }
-}
-
-pub fn count<I, P>(mut parser: P, n: usize) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
-where 
-    I: Input,
-    P: Parser<I>
-{
-    move |input: I| {
-        let mut it = input.parser_iter(parser.ref_mut());
-        let os = it.take(n).collect();
-        Ok((os, it.try_get()?))
     }
 }
 
@@ -257,16 +322,63 @@ where
     }
 }
 
-pub fn many_till<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = Vec<A::Output>, Error = A::Error> 
+
+pub fn many_range<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
-    A: Parser<I>,
-    A::Error: Error<I>,
-    B: Parser<I, Error = A::Error>
+    P: Parser<I>,
+    R: RangeBounds<usize>
 {
     move |input: I| {
-         let mut it = input.parser_iter(not(pred.ref_mut()).andr(parser.ref_mut()));
-         let os = it.collect();
-         Ok((os, it.get()))
+
+        let mut it = ParserIter::new(input, parser.ref_mut());
+        let os = match range.start_bound() {
+            Bound::Excluded(_) => unreachable!(),
+            Bound::Included(&s) => match range.end_bound() {
+                Bound::Excluded(&e) => {
+                    it.take(s)
+                    .scan((s, e), |state, v| {
+
+                        
+                        Some(v)
+                    })
+                    .collect()
+                },
+                Bound::Included(&e) => {
+                    // it.take(s)
+                    // .scan(e + 1, |e, v| {
+                    //     if *e == 0 {return None}
+                    //     *e = *e - 1;
+                    //     Some(v)
+                    // })
+                    // .collect()
+                    todo!()
+                }
+                Bound::Unbounded => todo!(),
+            }
+            Bound::Unbounded => match range.end_bound() {
+                Bound::Excluded(e) => todo!(),
+                Bound::Included(e) => todo!(),
+                Bound::Unbounded => todo!(),
+            }
+        };
+        
+        // let os = it.collect();
+        Ok((os, it.try_get()?))
     }
+}
+
+
+
+use super::primitive::{char, anychar};
+use super::error::ParseError;
+
+#[test]
+fn test() {
+    // let r: Result<(Vec<char>, &str), ParseError<&str>> = many_range(char('1'), 2..3).parse("11");
+    let r: Result<(Vec<char>, &str), ParseError<&str>> = many_range(char('1'), 1..3).parse("11112");
+
+    println!("{:?}", r);
+
+    let a = ..2;
 }

@@ -18,10 +18,6 @@ pub trait Input: Clone {
     fn diff(&self, other: &Self) -> Self;
 
     fn tokens(&self) -> Self::Tokens;
-
-    fn parser_iter<P, E>(self, parser: P) -> crate::iter::Iter<Self, P, E> {
-        crate::iter::Iter::new(self, parser)
-    }
 }
 
 impl<'a> Input for &'a str {

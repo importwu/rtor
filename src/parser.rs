@@ -452,31 +452,3 @@ where
         Ok((left, input))
     }
 }  
-
-#[derive(Debug, Clone)]
-enum Expr {
-    Value(char),
-    Bin {
-        op: char,
-        left: Box<Expr>,
-        right: Box<Expr>
-    }
-}
-
-use super::primitive::char;
-use super::error::ParseError;
-
-#[test]
-fn test() {
-    let r: Result<(Expr, &str), ParseError<&str>> = char('1')
-        .or(char('2'))
-        .or(char('3'))
-        .map(Expr::Value)
-        .chainl(|i| {
-            let (v, i) = char('+').or(char('-')).parse(i)?;
-            Ok((move|a: Expr, b: Expr| Expr::Bin { op: v, left: Box::new(a), right: Box::new(b) }, i))
-        }, Expr::Value('0'))
-        .parse("1+2+3");
-
-    println!("{:#?}", r);
-}
