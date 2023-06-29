@@ -373,7 +373,7 @@ where
     }
 }
 
-pub fn skipr<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn skipr<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = (), Error = P::Error> 
 where
     I: Input,
     P: Parser<I>,
@@ -424,7 +424,7 @@ where
             }
         }
 
-        Ok((os, input))
+        Ok(((), input))
     }
 }
 
