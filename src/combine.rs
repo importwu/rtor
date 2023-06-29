@@ -95,22 +95,6 @@ where
     }
 }
 
-pub fn many_till1<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = Vec<A::Output>, Error = A::Error> 
-where
-    I: Input,
-    A: Parser<I>,
-    A::Error: Error<I>,
-    B: Parser<I, Error = A::Error>
-{
-    move |input: I| {
-        let (o, i) = not(pred.ref_mut()).andr(parser.ref_mut()).parse(input)?;
-        let mut os = vec![o];
-        let mut it = ParserIter::new(i, not(pred.ref_mut()).andr(parser.ref_mut()));
-        it.for_each(|o| os.push(o));
-        Ok((os, it.get()))
-    }
-}
-
 pub fn count<I, P>(mut parser: P, n: usize) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where 
     I: Input,
@@ -157,21 +141,6 @@ where
 {
     move |input: I| {
         let mut it = ParserIter::new(input, not(pred.ref_mut()).andr(parser.ref_mut()));
-        it.for_each(|_| ());
-        Ok(((), it.get()))
-    }
-}
-
-pub fn skip_till1<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = (), Error = A::Error> 
-where
-    I: Input,
-    A: Parser<I>,
-    A::Error: Error<I>,
-    B: Parser<I, Error = A::Error>
-{
-    move |input: I| {
-        let (_, i) = not(pred.ref_mut()).andr(parser.ref_mut()).parse(input)?;
-        let mut it = ParserIter::new(i, not(pred.ref_mut()).andr(parser.ref_mut()));
         it.for_each(|_| ());
         Ok(((), it.get()))
     }
@@ -323,48 +292,82 @@ where
 }
 
 
-pub fn many_range<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn manyr<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>,
     R: RangeBounds<usize>
 {
-    move |input: I| {
-
-        let mut it = ParserIter::new(input, parser.ref_mut());
-        let os = match range.start_bound() {
-            Bound::Excluded(_) => unreachable!(),
+    move |mut input: I| {
+        let (start, end) = match range.start_bound() {
+            Bound::Excluded(&s) => match range.end_bound() {
+                Bound::Excluded(&e) => (Some(s.saturating_sub(1)), Some(e.saturating_sub(1))),
+                Bound::Included(&e) => (Some(s), Some(e)),
+                Bound::Unbounded => (Some(s), None),
+            }
             Bound::Included(&s) => match range.end_bound() {
-                Bound::Excluded(&e) => {
-                    it.take(s)
-                    .scan((s, e), |state, v| {
-
-                        
-                        Some(v)
-                    })
-                    .collect()
-                },
-                Bound::Included(&e) => {
-                    // it.take(s)
-                    // .scan(e + 1, |e, v| {
-                    //     if *e == 0 {return None}
-                    //     *e = *e - 1;
-                    //     Some(v)
-                    // })
-                    // .collect()
-                    todo!()
-                }
-                Bound::Unbounded => todo!(),
+                Bound::Excluded(&e) => (Some(s), Some(e.saturating_sub(1))),
+                Bound::Included(&e) => (Some(s), Some(e)),
+                Bound::Unbounded => (Some(s), None),
             }
             Bound::Unbounded => match range.end_bound() {
-                Bound::Excluded(e) => todo!(),
-                Bound::Included(e) => todo!(),
-                Bound::Unbounded => todo!(),
+                Bound::Excluded(&e) => (None, Some(e.saturating_sub(1))),
+                Bound::Included(&e) => (None, Some(e)),
+                Bound::Unbounded => (None, None),
             }
         };
         
-        // let os = it.collect();
-        Ok((os, it.try_get()?))
+        let mut os = vec![];
+
+        match start {
+            Some(s) => {
+                for _ in 0..s {
+                    let (o, i) = parser.parse(input.clone())?;
+                    input = i;
+                    os.push(o);
+                }
+                match end {
+                    Some(e) => {
+                        for _ in 0..(e - s) {
+                            match parser.parse(input.clone()) {
+                                Ok((o, i)) => {
+                                    input = i;
+                                    os.push(o);
+                                }
+                                Err(_) => break
+                            }
+                        }
+                    }
+                    None => {
+                        while let Ok((o, i)) = parser.parse(input.clone()) {
+                            input = i;
+                            os.push(o);
+                        }
+                    }
+                }
+            }
+            None => match end {
+                Some(e) => {
+                    for _ in 0..e {
+                        match parser.parse(input.clone()) {
+                            Ok((o, i)) => {
+                                input = i;
+                                os.push(o);
+                            }
+                            Err(_) => break
+                        }
+                    }
+                }
+                None => {
+                    while let Ok((o, i)) = parser.parse(input.clone()) {
+                        input = i;
+                        os.push(o);
+                    }
+                }
+            }
+        }
+
+        Ok((os, input))
     }
 }
 
@@ -376,9 +379,8 @@ use super::error::ParseError;
 #[test]
 fn test() {
     // let r: Result<(Vec<char>, &str), ParseError<&str>> = many_range(char('1'), 2..3).parse("11");
-    let r: Result<(Vec<char>, &str), ParseError<&str>> = many_range(char('1'), 1..3).parse("11112");
+    let r: Result<(Vec<char>, &str), ParseError<&str>> = manyr(char('1'), ..).parse("11112");
 
     println!("{:?}", r);
-
-    let a = ..2;
+ 
 }

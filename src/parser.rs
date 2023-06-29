@@ -31,12 +31,12 @@ pub trait Parser<I> {
         Or { first: self, second, marker: PhantomData }
     }
 
-    fn andl<P>(self, second: P) -> AndL<I, Self, P> where Self: Sized {
-        AndL { first: self, second, marker: PhantomData }
+    fn andl<P>(self, second: P) -> Andl<I, Self, P> where Self: Sized {
+        Andl { first: self, second, marker: PhantomData }
     }
 
-    fn andr<P>(self, second: P) -> AndR<I, Self, P> where Self: Sized {
-        AndR { first: self, second, marker: PhantomData }
+    fn andr<P>(self, second: P) -> Andr<I, Self, P> where Self: Sized {
+        Andr { first: self, second, marker: PhantomData }
     }
 
     fn and<P>(self, second: P) -> And<I, Self, P> where Self: Sized {
@@ -167,13 +167,13 @@ where
 }
 
 #[derive(Clone)]
-pub struct AndL<I, A, B> {
+pub struct Andl<I, A, B> {
     first: A,
     second: B,
     marker: PhantomData<I>
 }
 
-impl<I, A, B> Parser<I> for AndL<I, A, B> 
+impl<I, A, B> Parser<I> for Andl<I, A, B> 
 where
     A: Parser<I>,
     B: Parser<I, Error = A::Error>
@@ -189,13 +189,13 @@ where
 }
 
 #[derive(Clone)]
-pub struct AndR<I, A, B> {
+pub struct Andr<I, A, B> {
     first: A,
     second: B,
     marker: PhantomData<I>
 }
 
-impl<I, A, B> Parser<I> for AndR<I, A, B> 
+impl<I, A, B> Parser<I> for Andr<I, A, B> 
 where
     A: Parser<I>,
     B: Parser<I, Error = A::Error>
