@@ -1,19 +1,12 @@
 use rtor::{
     ParseResult,
     Parser,
-    token::symbol,
-    character::{
-        ascii::digit,
-        sat,
-        char
-    }, 
-    combinator::{
-        skip_many,
-        skip_many1,
-        recognize,
-        opt,
-        between
-    }
+    token::{
+        symbol,
+        float,
+        parens
+    },
+    character::char, 
 };
 
 fn main() {
@@ -46,17 +39,9 @@ impl Expr {
     }
 }
 
-fn number(input: &str) -> ParseResult<f64, &str> {
-    let integer = char('0').or(sat(|ch| matches!(ch, '1'..='9')).andl(skip_many(digit)));
-    let fraction = char('.').andr(skip_many1(digit));
-    recognize(opt(char('-')).andl(integer).andl(opt(fraction)))
-        .map(|i: &str| i.parse::<f64>().unwrap())
-        .parse(input)
-}
-
 fn expr(input: &str) -> ParseResult<Expr, &str> {
-    let atom = symbol(number.map(Expr::Value)
-        .or(between(char('('), expr, char(')'))));
+    let atom = symbol(float.map(|i: &str| Expr::Value(i.parse::<f64>().unwrap()))
+        .or(parens(expr)));
 
     atom.chainl1(|i| {
         let (op, i) = symbol(char('*').or(char('/'))).parse(i)?;

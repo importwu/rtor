@@ -7,7 +7,6 @@ use crate::{
     Input, 
     Parser, 
     Error, 
-    AsChar, 
     ParserIter, 
 };
 
@@ -315,7 +314,7 @@ where
                 }
                 match end {
                     Some(e) => {
-                        for _ in 0..(e - s) {
+                        for _ in 0..(e.saturating_sub(s)) {
                             match parser.parse(input.clone()) {
                                 Ok((o, i)) => {
                                     input = i;
@@ -411,16 +410,4 @@ where
 
         Ok(((), input))
     }
-}
-
-use super::character::{char, anychar};
-use super::error::ParseError;
-
-#[test]
-fn test() {
-    // let r: Result<(Vec<char>, &str), ParseError<&str>> = many_range(char('1'), 2..3).parse("11");
-    let r: Result<(Vec<char>, &str), ParseError<&str>> = manyr(char('1'), ..).parse("11112");
-
-    println!("{:?}", r);
- 
 }

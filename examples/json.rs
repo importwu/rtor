@@ -3,14 +3,16 @@ use std::collections::HashMap;
 use rtor::{
     Parser, 
     ParseResult,
-    token::symbol,
+    token::{
+        symbol,
+        braces,
+        brackets,
+        comma_sep,
+        float
+    },
     character::{
         oneof,
-        sat, 
-        ascii::{
-            digit,
-            hex
-        }, 
+        ascii::hex, 
         eof, 
         anychar,
         char,
@@ -18,14 +20,11 @@ use rtor::{
     }, 
     combinator::{
         between, 
-        sepby, 
         pair, 
         skip, 
         skip_many, 
-        opt,
-        skip_many1, 
         recognize, 
-        not
+        not,
     }
 };
 
@@ -51,7 +50,7 @@ fn main() {
     }
     "#;
 
-    let json_value = symbol(json).andl(symbol(eof)).parse(s);
+    let json_value = symbol(json_value).andl(symbol(eof)).parse(s);
 
     println!("{:#?}", json_value);
 }
@@ -67,35 +66,16 @@ enum JsonValue {
 }
 
 //https://www.json.org/json-en.html
-fn json(input: &str) -> ParseResult<JsonValue, &str> {
-    json_object
-        .or(json_array)
-        .or(json_number)
+fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
+    braces(comma_sep(pair(symbol(key), symbol(char(':')), symbol(json_value))))
+        .map(|members| JsonValue::Object(HashMap::from_iter(members)))
+        .or(brackets(comma_sep(symbol(json_value))).map(JsonValue::Array))
+        .or(float.map(|i: &str| JsonValue::Number(i.parse::<f64>().unwrap())))
         .or(key.map(JsonValue::String))
         .or(string("true").map(|_| JsonValue::Boolean(true)))
         .or(string("false").map(|_| JsonValue::Boolean(false)))
         .or(string("null").map(|_| JsonValue::Null))
         .parse(input)
-}
-
-fn json_object(input: &str) -> ParseResult<JsonValue, &str> {
-    between(
-        char('{'), 
-        sepby(pair(symbol(key), symbol(char(':')), symbol(json)), symbol(char(','))), 
-        symbol(char('}'))
-    )
-    .map(|members| JsonValue::Object(HashMap::from_iter(members)))
-    .parse(input)
-}
-
-fn json_array(input: &str) -> ParseResult<JsonValue, &str> {
-    between(
-        char('['),
-        sepby(symbol(json), symbol(char(','))), 
-        symbol(char(']'))
-    )
-    .map(JsonValue::Array)
-    .parse(input)
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
@@ -107,13 +87,4 @@ fn key(input: &str) -> ParseResult<String, &str> {
         char('"')
     )
     .parse(input)
-}
-
-fn json_number(input: &str) -> ParseResult<JsonValue, &str> { 
-    let exponent = char('E').or(char('e')).andr(opt(char('+').or(char('-')))).andr(skip_many1(digit));
-    let fraction = char('.').andr(skip_many1(digit));
-    let integer = char('0').or(sat(|ch| matches!(ch, '1'..='9')).andl(skip_many(digit)));
-    recognize(opt(char('-')).andr(integer).andr(opt(fraction)).andr(opt(exponent)))
-        .map(|i: &str| JsonValue::Number(i.parse::<f64>().unwrap()))
-        .parse(input)
 }
