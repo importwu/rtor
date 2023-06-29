@@ -265,5 +265,4 @@ pub mod unicode {
     {
         sat(|c: &I::Token| c.as_char().is_whitespace()).parse(input)
     }
-
 }

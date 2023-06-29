@@ -292,33 +292,35 @@ where
 }
 
 
+fn map_range<R: RangeBounds<usize>>(range: R) -> (Option<usize>, Option<usize>) {
+    match range.start_bound() {
+        Bound::Excluded(&s) => match range.end_bound() {
+            Bound::Excluded(&e) => (Some(s.saturating_sub(1)), Some(e.saturating_sub(1))),
+            Bound::Included(&e) => (Some(s), Some(e)),
+            Bound::Unbounded => (Some(s), None),
+        }
+        Bound::Included(&s) => match range.end_bound() {
+            Bound::Excluded(&e) => (Some(s), Some(e.saturating_sub(1))),
+            Bound::Included(&e) => (Some(s), Some(e)),
+            Bound::Unbounded => (Some(s), None),
+        }
+        Bound::Unbounded => match range.end_bound() {
+            Bound::Excluded(&e) => (None, Some(e.saturating_sub(1))),
+            Bound::Included(&e) => (None, Some(e)),
+            Bound::Unbounded => (None, None),
+        }
+    }
+}
+
 pub fn manyr<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>,
     R: RangeBounds<usize>
 {
+    let (start, end) = map_range(range);
     move |mut input: I| {
-        let (start, end) = match range.start_bound() {
-            Bound::Excluded(&s) => match range.end_bound() {
-                Bound::Excluded(&e) => (Some(s.saturating_sub(1)), Some(e.saturating_sub(1))),
-                Bound::Included(&e) => (Some(s), Some(e)),
-                Bound::Unbounded => (Some(s), None),
-            }
-            Bound::Included(&s) => match range.end_bound() {
-                Bound::Excluded(&e) => (Some(s), Some(e.saturating_sub(1))),
-                Bound::Included(&e) => (Some(s), Some(e)),
-                Bound::Unbounded => (Some(s), None),
-            }
-            Bound::Unbounded => match range.end_bound() {
-                Bound::Excluded(&e) => (None, Some(e.saturating_sub(1))),
-                Bound::Included(&e) => (None, Some(e)),
-                Bound::Unbounded => (None, None),
-            }
-        };
-        
         let mut os = vec![];
-
         match start {
             Some(s) => {
                 for _ in 0..s {
@@ -371,7 +373,60 @@ where
     }
 }
 
+pub fn skipr<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+where
+    I: Input,
+    P: Parser<I>,
+    R: RangeBounds<usize>
+{
+    let (start, end) = map_range(range);
+    move |mut input: I| {
+        match start {
+            Some(s) => {
+                for _ in 0..s {
+                    let (_, i) = parser.parse(input.clone())?;
+                    input = i;
+                }
+                match end {
+                    Some(e) => {
+                        for _ in 0..(e - s) {
+                            match parser.parse(input.clone()) {
+                                Ok((_, i)) => {
+                                    input = i;
+                                }
+                                Err(_) => break
+                            }
+                        }
+                    }
+                    None => {
+                        while let Ok((_, i)) = parser.parse(input.clone()) {
+                            input = i;
+                        }
+                    }
+                }
+            }
+            None => match end {
+                Some(e) => {
+                    for _ in 0..e {
+                        match parser.parse(input.clone()) {
+                            Ok((_, i)) => {
+                                input = i;
+                            }
+                            Err(_) => break
+                        }
+                    }
+                }
+                None => {
+                    while let Ok((_, i)) = parser.parse(input.clone()) {
+                        input = i;
+                    }
+                }
+            }
+        }
 
+        Ok((os, input))
+    }
+}
 
 use super::primitive::{char, anychar};
 use super::error::ParseError;
