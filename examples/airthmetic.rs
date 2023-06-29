@@ -1,17 +1,17 @@
 use rtor::{
     ParseResult,
     Parser,
-    primitive::{
+    token::symbol,
+    character::{
         ascii::digit,
         sat,
         char
     }, 
-    combine::{
+    combinator::{
         skip_many,
         skip_many1,
         recognize,
         opt,
-        token,
         between
     }
 };
@@ -55,15 +55,15 @@ fn number(input: &str) -> ParseResult<f64, &str> {
 }
 
 fn expr(input: &str) -> ParseResult<Expr, &str> {
-    let atom = token(number.map(Expr::Value)
+    let atom = symbol(number.map(Expr::Value)
         .or(between(char('('), expr, char(')'))));
 
     atom.chainl1(|i| {
-        let (op, i) = token(char('*').or(char('/'))).parse(i)?;
+        let (op, i) = symbol(char('*').or(char('/'))).parse(i)?;
         Ok((move |l: Expr, r: Expr| Expr::Binary { op, left: Box::new(l), right: Box::new(r) }, i))
     })
     .chainl1(|i| {
-        let (op, i) = token(char('+').or(char('-'))).parse(i)?;
+        let (op, i) = symbol(char('+').or(char('-'))).parse(i)?;
         Ok((move |l: Expr, r: Expr| Expr::Binary { op, left: Box::new(l), right: Box::new(r) }, i))
     })
     .parse(input)

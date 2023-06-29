@@ -3,7 +3,8 @@ use std::collections::HashMap;
 use rtor::{
     Parser, 
     ParseResult,
-    primitive::{
+    token::symbol,
+    character::{
         oneof,
         sat, 
         ascii::{
@@ -15,8 +16,7 @@ use rtor::{
         char,
         string
     }, 
-    combine::{
-        token, 
+    combinator::{
         between, 
         sepby, 
         pair, 
@@ -51,7 +51,7 @@ fn main() {
     }
     "#;
 
-    let json_value = token(json).andl(token(eof)).parse(s);
+    let json_value = symbol(json).andl(symbol(eof)).parse(s);
 
     println!("{:#?}", json_value);
 }
@@ -81,8 +81,8 @@ fn json(input: &str) -> ParseResult<JsonValue, &str> {
 fn json_object(input: &str) -> ParseResult<JsonValue, &str> {
     between(
         char('{'), 
-        sepby(pair(token(key), token(char(':')), token(json)), token(char(','))), 
-        token(char('}'))
+        sepby(pair(symbol(key), symbol(char(':')), symbol(json)), symbol(char(','))), 
+        symbol(char('}'))
     )
     .map(|members| JsonValue::Object(HashMap::from_iter(members)))
     .parse(input)
@@ -91,8 +91,8 @@ fn json_object(input: &str) -> ParseResult<JsonValue, &str> {
 fn json_array(input: &str) -> ParseResult<JsonValue, &str> {
     between(
         char('['),
-        sepby(token(json), token(char(','))), 
-        token(char(']'))
+        sepby(symbol(json), symbol(char(','))), 
+        symbol(char(']'))
     )
     .map(JsonValue::Array)
     .parse(input)

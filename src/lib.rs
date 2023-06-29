@@ -1,7 +1,8 @@
 mod parser;
 mod error;
-pub mod primitive;
-pub mod combine;
+pub mod character;
+pub mod combinator;
+pub mod token;
 mod iter;
 mod input;
 
