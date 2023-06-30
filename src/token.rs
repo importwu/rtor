@@ -6,7 +6,6 @@ use crate::{
     ParseResult,
     character::{
         char,
-        sat,
         ascii::{
             space,
             digit,
@@ -21,6 +20,7 @@ use crate::{
         recognize,
         opt,
     }, 
+    alt
 }; 
 
 pub fn symbol<I, P, E>(parser: P) -> impl Parser<I, Output = P::Output, Error = E> 
@@ -129,9 +129,21 @@ where
     I::Token: AsChar,
     E: Error<I>
 {
-    let exponent = char('E').or(char('e')).andr(opt(char('+').or(char('-')))).andr(skip_many1(digit));
-    let fraction = char('.').andr(skip_many1(digit));
-    let integer = char('0').or(sat(|ch: &I::Token| matches!(ch.as_char(), '1'..='9')).andl(skip_many(digit)));
-    recognize(opt(char('-')).andr(integer).andr(opt(fraction)).andr(opt(exponent)))
-        .parse(input)
+    // let exponent = alt!(char('e'), char('E')).andr(opt(alt!(char('+'), char('-')))).andr(skip_many1(digit));
+    let exponent = (alt!(char('e'), char('E')), opt(alt!(char('+'), char('-'))), skip_many1(digit));
+    // let fraction = char('.').andr(skip_many1(digit));
+    let fraction = (char('.'), skip_many1(digit));
+    let integer = skip_many1(digit);
+    // recognize(opt(char('-')).andr(integer).andr(opt(fraction)).andr(opt(exponent)))
+    //     .parse(input)
+    recognize((opt(char('-')), integer, opt(fraction), opt(exponent))).parse(input)
+}
+
+pub fn integer<I, E>(input: I) -> ParseResult<I, I, E>
+where
+    I: Input,
+    I::Token: AsChar,
+    E: Error<I>
+{
+    recognize(skip_many1(digit)).parse(input)
 }

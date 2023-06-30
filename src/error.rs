@@ -6,8 +6,8 @@ use std::{
 use crate::Input;
 
 pub trait Error<I: Input> {
-    fn unexpect(token: Option<I::Token>) -> Self;
-    fn expect(message: &str) -> Self;
+    fn unexpect(input: I) -> Self;
+    fn expect(input: I, message: &str) -> Self;
     fn merge(self, other: Self) -> Self;
 }
 
@@ -18,11 +18,11 @@ pub enum ParseError<I: Input> {
 }
 
 impl<I: Input> Error<I> for ParseError<I> {
-    fn unexpect(token: Option<I::Token>) -> Self {
-        Self::Unexpected(token)
+    fn unexpect(mut input: I) -> Self {
+        Self::Unexpected(input.next())
     }
 
-    fn expect(message: &str) -> Self {
+    fn expect(_: I, message: &str) -> Self {
         Self::Expected(message.to_owned())
     }
 

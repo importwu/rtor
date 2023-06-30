@@ -251,10 +251,10 @@ where
     P: Parser<I>,
     P::Error: Error<I>
 {
-    move |mut input: I| {
+    move |input: I| {
         match parser.parse(input.clone()) {
             Err(_) => Ok(((), input)),
-            Ok(_) => Err(Error::unexpect(input.next()))
+            Ok(_) => Err(Error::unexpect(input))
         }
     }
 }

@@ -51,7 +51,7 @@ fn main() {
         "ytgqmlpld": "Y7wd"
     }
     "#;
-    
+
     let json_value = symbol(json_value).andl(symbol(eof)).parse(s);
     println!("{:#?}", json_value);
 }

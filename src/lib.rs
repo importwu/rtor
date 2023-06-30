@@ -89,6 +89,17 @@ macro_rules! alt {
             }
         }
     };
+    ($a: expr, $b: expr) => {
+        |i| {
+            match $a.parse(Clone::clone(&i)) {
+                Ok(t) => Ok(t),
+                Err(e1) => match $b.parse(Clone::clone(&i)) {
+                    Ok(t) => Ok(t),
+                    Err(e2) => Err(Error::merge(e1, e2))
+                }
+            } 
+        }
+    }
 }
 
 #[macro_export]

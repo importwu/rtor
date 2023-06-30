@@ -59,10 +59,10 @@ where
     E: Error<I>
 {
     move |mut input: I| {
+        let i = input.clone();
         match input.next() {
             Some(t) if pred(&t) => Ok((t, input)),
-            Some(t) => Err(Error::unexpect(Some(t))),
-            None => Err(Error::unexpect(None))
+            _=> Err(Error::unexpect(i)),
         }
     }
 }
@@ -126,18 +126,18 @@ where
     I: Input,
     E: Error<I>
 {
-    match input.next() {
+    match input.peek() {
         None => Ok(((), input)),
-        Some(t) => Err(Error::unexpect(Some(t)))
+        Some(_) => Err(Error::unexpect(input))
     }
 }
 
-pub fn error<I, E>(mut input: I) -> ParseResult<(), I, E> 
+pub fn error<I, E>(input: I) -> ParseResult<(), I, E> 
 where
     I: Input,
     E: Error<I>
 {
-    Err(Error::unexpect(input.next()))
+    Err(Error::unexpect(input))
 }
 
 pub fn pure<I, T, E>(t: T) -> impl Parser<I, Output = T, Error = E> 

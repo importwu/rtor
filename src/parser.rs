@@ -85,23 +85,6 @@ pub trait Parser<I> {
 
 }
 
-
-impl<I, A, B> Parser<I> for (A, B) 
-where
-    A: Parser<I>,
-    B: Parser<I, Error = A::Error>
-{
-    type Output = (A::Output, B::Output);
-    type Error = A::Error;
-
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
-        let (o1, i) = self.0.parse(input)?;
-        let (o2, i) = self.1.parse(i)?;
-        Ok(((o1, o2), i))
-    }
-}
-
-
 impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     type Output = O;
     type Error = E;
@@ -343,7 +326,7 @@ where
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         match self.parser.parse(input.clone()) {
             Ok(t) => Ok(t),
-            Err(_) => Err(Error::expect(&self.message))
+            Err(_) => Err(Error::expect(input, &self.message))
         }
     }
 }
@@ -469,3 +452,54 @@ where
         Ok((left, input))
     }
 }  
+
+impl<I, A, B> Parser<I> for (A, B) 
+where
+    A: Parser<I>,
+    B: Parser<I, Error = A::Error>
+{
+    type Output = (A::Output, B::Output);
+    type Error = A::Error;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (o1, i) = self.0.parse(input)?;
+        let (o2, i) = self.1.parse(i)?;
+        Ok(((o1, o2), i))
+    }
+}
+
+impl<I, A, B, C> Parser<I> for (A, B, C) 
+where
+    A: Parser<I>,
+    B: Parser<I, Error = A::Error>,
+    C: Parser<I, Error = A::Error>,
+{
+    type Output = (A::Output, B::Output, C::Output);
+    type Error = A::Error;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (o1, i) = self.0.parse(input)?;
+        let (o2, i) = self.1.parse(i)?;
+        let (o3, i) = self.2.parse(i)?;
+        Ok(((o1, o2, o3), i))
+    }
+}
+
+impl<I, A, B, C, D> Parser<I> for (A, B, C, D) 
+where
+    A: Parser<I>,
+    B: Parser<I, Error = A::Error>,
+    C: Parser<I, Error = A::Error>,
+    D: Parser<I, Error = A::Error>,
+{
+    type Output = (A::Output, B::Output, C::Output, D::Output);
+    type Error = A::Error;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (o1, i) = self.0.parse(input)?;
+        let (o2, i) = self.1.parse(i)?;
+        let (o3, i) = self.2.parse(i)?;
+        let (o4, i) = self.3.parse(i)?;
+        Ok(((o1, o2, o3, o4), i))
+    }
+}
