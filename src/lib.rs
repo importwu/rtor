@@ -5,6 +5,7 @@ pub mod combinator;
 pub mod token;
 mod iter;
 mod input;
+mod r#macro;
 
 pub use self::{
     error::{
@@ -119,4 +120,35 @@ macro_rules! alt_inner {
             Err(e2) => Err(Error::merge($e1, e2))
         }
     }
+}
+
+pub trait Alt<I> {
+    type Output;
+    type Error;
+    fn choice(&mut self, input: I) -> ParseResult<Self::Output, I, Self::Error>;
+}
+
+impl<I, A, B> Alt<I> for (A, B) 
+where
+    I: Input,
+    A: Parser<I>,
+    B: Parser<I, Error = A::Error, Output = A::Output>,
+    A::Error: Error<I>
+{
+    type Output = A::Output;
+    type Error = A::Error;
+
+    fn choice(&mut self, input: I) -> ParseResult<Self::Output, I, Self::Error> {
+        match self.0.parse(input.clone()) {
+            Ok(t) => Ok(t),
+            Err(e1) => match self.1.parse(input) {
+                Ok(t) => Ok(t),
+                Err(e2) => Err(e1.merge(e2))
+            }
+        }
+    }
+}
+
+pub fn alt<I, A: Alt<I>>(mut list: A) -> impl Parser<I, Output = A::Output, Error = A::Error> {
+    move |input: I| list.choice(input)
 }
