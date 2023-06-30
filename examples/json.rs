@@ -25,7 +25,9 @@ use rtor::{
         skip_many, 
         recognize, 
         not,
-    }
+    }, 
+    Error,
+    alt
 };
 
 fn main() {
@@ -49,9 +51,8 @@ fn main() {
         "ytgqmlpld": "Y7wd"
     }
     "#;
-
+    
     let json_value = symbol(json_value).andl(symbol(eof)).parse(s);
-
     println!("{:#?}", json_value);
 }
 
@@ -67,15 +68,15 @@ enum JsonValue {
 
 //https://www.json.org/json-en.html
 fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
-    braces(comma_sep(pair(symbol(key), symbol(char(':')), symbol(json_value))))
-        .map(|members| JsonValue::Object(HashMap::from_iter(members)))
-        .or(brackets(comma_sep(symbol(json_value))).map(JsonValue::Array))
-        .or(float.map(|i: &str| JsonValue::Number(i.parse::<f64>().unwrap())))
-        .or(key.map(JsonValue::String))
-        .or(string("true").map(|_| JsonValue::Boolean(true)))
-        .or(string("false").map(|_| JsonValue::Boolean(false)))
-        .or(string("null").map(|_| JsonValue::Null))
-        .parse(input)
+    alt!(
+        braces(comma_sep(pair(symbol(key), symbol(char(':')), symbol(json_value)))).map(|members| JsonValue::Object(HashMap::from_iter(members))),
+        brackets(comma_sep(symbol(json_value))).map(JsonValue::Array),
+        float.map(|i: &str| JsonValue::Number(i.parse::<f64>().unwrap())),
+        key.map(JsonValue::String),
+        string("true").map(|_| JsonValue::Boolean(true)),
+        string("false").map(|_| JsonValue::Boolean(false)),
+        string("null").map(|_| JsonValue::Null)
+    ).parse(input)
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
@@ -85,6 +86,5 @@ fn key(input: &str) -> ParseResult<String, &str> {
         char('"'), 
         recognize(skip_many(character)).map(|i: &str| i.to_owned()),
         char('"')
-    )
-    .parse(input)
+    ).parse(input)
 }

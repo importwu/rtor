@@ -85,6 +85,23 @@ pub trait Parser<I> {
 
 }
 
+
+impl<I, A, B> Parser<I> for (A, B) 
+where
+    A: Parser<I>,
+    B: Parser<I, Error = A::Error>
+{
+    type Output = (A::Output, B::Output);
+    type Error = A::Error;
+
+    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+        let (o1, i) = self.0.parse(input)?;
+        let (o2, i) = self.1.parse(i)?;
+        Ok(((o1, o2), i))
+    }
+}
+
+
 impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
     type Output = O;
     type Error = E;

@@ -18,6 +18,7 @@ pub trait Input: Clone {
     fn diff(&self, other: &Self) -> Self;
 
     fn tokens(&self) -> Self::Tokens;
+
 }
 
 impl<'a> Input for &'a str {

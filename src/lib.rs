@@ -72,3 +72,40 @@ impl<'a,  T: PartialEq> FindToken<T> for &'a [T] {
         self.iter().any(|x| x == token)
     }
 }
+
+#[macro_export]
+macro_rules! alt {
+    ($a: expr, $b: expr, $($rest: expr),*) => {
+        |i| {
+            match $a.parse(Clone::clone(&i)) {
+                Ok(t) => Ok(t),
+                Err(e1) => match $b.parse(Clone::clone(&i)) {
+                    Ok(t) => Ok(t),
+                    Err(e2) => {
+                        let e1 = Error::merge(e1, e2);
+                        $crate::alt_inner!(i, e1, $($rest),*)
+                    }
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! alt_inner {
+    ($i: expr, $e1: expr, $a: expr, $($rest: expr),+) => {
+        match $a.parse(Clone::clone(&$i)) {
+            Ok(t) => Ok(t),
+            Err(e2) => {
+                let e1 = Error::merge($e1, e2);
+                $crate::alt_inner!($i, e1, $($rest),+)
+            }
+        }
+    };
+    ($i: expr, $e1: expr, $a: expr) => {
+        match $a.parse(Clone::clone(&$i)) {
+            Ok(t) => Ok(t),
+            Err(e2) => Err(Error::merge($e1, e2))
+        }
+    }
+}

@@ -41,7 +41,7 @@ where
     P: Parser<I, Error = E>,
     E: Error<I>
 {
-    let mut parser = between(symbol(char('(')), parser, symbol(char(')')));
+    let mut parser = between(char('('), parser, symbol(char(')')));
     move |input: I| parser.parse(input)
 }
 
@@ -52,7 +52,7 @@ where
     P: Parser<I, Error = E>,
     E: Error<I>
 {
-    let mut parser = between(symbol(char('{')), parser, symbol(char('}')));
+    let mut parser = between(char('{'), parser, symbol(char('}')));
     move |input: I| parser.parse(input)
 }
 
@@ -63,7 +63,7 @@ where
     P: Parser<I, Error = E>,
     E: Error<I>
 {
-    let mut parser = between(symbol(char('<')), parser, symbol(char('>')));
+    let mut parser = between(char('<'), parser, symbol(char('>')));
     move |input: I| parser.parse(input)
 }
 
@@ -74,7 +74,7 @@ where
     P: Parser<I, Error = E>,
     E: Error<I>
 {
-    let mut parser = between(symbol(char('[')), parser, symbol(char(']')));
+    let mut parser = between(char('['), parser, symbol(char(']')));
     move |input: I| parser.parse(input)
 }
 
