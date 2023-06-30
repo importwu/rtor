@@ -8,7 +8,6 @@ use crate::{
     Parser, 
     Error, 
     ParserIter, 
-    tuple_parser, 
 };
 
 pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
@@ -412,19 +411,3 @@ where
         Ok(((), input))
     }
 }
-
-
-tuple_parser!(A, B);
-tuple_parser!(A, B, C);
-tuple_parser!(A, B, C, D);
-tuple_parser!(A, B, C, D, E);
-tuple_parser!(A, B, C, D, E, F);
-tuple_parser!(A, B, C, D, E, F, G);
-tuple_parser!(A, B, C, D, E, F, G, H);
-tuple_parser!(A, B, C, D, E, F, G, H, I);
-tuple_parser!(A, B, C, D, E, F, G, H, I, J);
-tuple_parser!(A, B, C, D, E, F, G, H, I, J, K);
-tuple_parser!(A, B, C, D, E, F, G, H, I, J, K, L);
-tuple_parser!(A, B, C, D, E, F, G, H, I, J, K, L, M);
-tuple_parser!(A, B, C, D, E, F, G, H, I, J, K, L, M, N);
-tuple_parser!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O);
