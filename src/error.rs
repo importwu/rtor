@@ -56,7 +56,7 @@ impl<I: Input + fmt::Display + fmt::Debug> error::Error for ParseError<I> where 
 #[derive(Debug)]
 pub struct ParseErrors<I: Input> where I::Token: AsChar + fmt::Debug {
     pub location: Location,
-    pub errors: Vec<ParseError<LocatedInput<I>>>
+    pub errors: Vec<ParseError<I>>
 }
 
 impl<I> Error<LocatedInput<I>> for ParseErrors<I> 
