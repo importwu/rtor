@@ -19,8 +19,8 @@ use crate::{
         sepby1,
         recognize,
         opt,
+        alt
     }, 
-    alt
 }; 
 
 pub fn symbol<I, P, E>(parser: P) -> impl Parser<I, Output = P::Output, Error = E> 
@@ -123,35 +123,14 @@ where
     move |input: I| parser.parse(input)
 }
 
-// pub fn float<I, E>(input: I) -> ParseResult<I, I, E>
-// where
-//     I: Input,
-//     I::Token: AsChar,
-//     E: Error<I>
-// {
-//     let exponent = (alt!(char('e'), char('E')), opt(alt!(char('+'), char('-'))), skip_many1(digit));
-//     let fraction = (char('.'), skip_many1(digit));
-//     let integer = skip_many1(digit);
-//     recognize((opt(char('-')), integer, opt(fraction), opt(exponent))).parse(input)
-// }
-
-pub fn float<I, E>(input: I) -> ParseResult<I, I, E>
+pub fn number<I, E>(input: I) -> ParseResult<I, I, E>
 where
     I: Input,
     I::Token: AsChar,
     E: Error<I>
 {
-    let exponent = alt!(char('e'), char('E')).andr(opt(alt!(char('+'), char('-')))).andr(skip_many1(digit));
-    let fraction = char('.').andr(skip_many1(digit));
-    recognize(opt(char('-')).andr(integer).andr(opt(fraction)).andr(opt(exponent)))
-        .parse(input)
-}
-
-pub fn integer<I, E>(input: I) -> ParseResult<I, I, E>
-where
-    I: Input,
-    I::Token: AsChar,
-    E: Error<I>
-{
-    recognize(skip_many1(digit)).parse(input)
+    let exponent = (alt((char('e'), char('E'))), opt(alt((char('+'), char('-')))), skip_many1(digit));
+    let fraction = (char('.'), skip_many1(digit));
+    let integer = skip_many1(digit);
+    recognize((opt(char('-')), integer, opt(fraction), opt(exponent))).parse(input)
 }

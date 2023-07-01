@@ -3,15 +3,16 @@ use rtor::{
     Parser,
     token::{
         symbol,
-        float,
+        number,
         parens
     },
     character::char, 
+    combinator::alt
 };
 
 fn main() {
-    let v = expr.map(|e| e.eval()).parse("1+2*(3+4)+5*6");
-    println!("{:#?}", v)
+    let v = symbol(expr).map(|e| e.eval()).parse("1 + 2 * ( 3 + 4 ) + 5 * 6").unwrap().0;
+    assert_eq!(v, 45.0)
 }
 
 #[derive(Debug)]
@@ -40,16 +41,17 @@ impl Expr {
 }
 
 fn expr(input: &str) -> ParseResult<Expr, &str> {
-    let atom = symbol(float.map(|i: &str| Expr::Value(i.parse::<f64>().unwrap()))
-        .or(parens(expr)));
+    let atom = number.map(|i: &str| Expr::Value(i.parse::<f64>().unwrap()))
+        .or(parens(symbol(expr)));
 
-    atom.chainl1(|i| {
-        let (op, i) = symbol(char('*').or(char('/'))).parse(i)?;
-        Ok((move |l: Expr, r: Expr| Expr::Binary { op, left: Box::new(l), right: Box::new(r) }, i))
-    })
-    .chainl1(|i| {
-        let (op, i) = symbol(char('+').or(char('-'))).parse(i)?;
-        Ok((move |l: Expr, r: Expr| Expr::Binary { op, left: Box::new(l), right: Box::new(r) }, i))
-    })
-    .parse(input)
+    symbol(atom)
+        .chainl1(|i| {
+            let (op, i) = symbol(alt((char('*'), char('/')))).parse(i)?;
+            Ok((move |l: Expr, r: Expr| Expr::Binary { op, left: Box::new(l), right: Box::new(r) }, i))
+        })
+        .chainl1(|i| {
+            let (op, i) = symbol(alt((char('+'), char('-')))).parse(i)?;
+            Ok((move |l: Expr, r: Expr| Expr::Binary { op, left: Box::new(l), right: Box::new(r) }, i))
+        })
+        .parse(input)
 }

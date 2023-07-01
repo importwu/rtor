@@ -8,7 +8,7 @@ use rtor::{
         braces,
         brackets,
         comma_sep,
-        float
+        number
     },
     character::{
         oneof,
@@ -25,9 +25,8 @@ use rtor::{
         skip_many, 
         recognize, 
         not,
+        alt
     }, 
-    Error,
-    alt
 };
 
 fn main() {
@@ -68,21 +67,20 @@ enum JsonValue {
 
 //https://www.json.org/json-en.html
 fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
-    alt!(
+    alt((
         braces(comma_sep(pair(symbol(key), symbol(char(':')), symbol(json_value)))).map(|members| JsonValue::Object(HashMap::from_iter(members))),
         brackets(comma_sep(symbol(json_value))).map(JsonValue::Array),
-        float.map(|i: &str| JsonValue::Number(i.parse::<f64>().unwrap())),
+        number.map(|i: &str| JsonValue::Number(i.parse::<f64>().unwrap())),
         key.map(JsonValue::String),
         string("true").map(|_| JsonValue::Boolean(true)),
         string("false").map(|_| JsonValue::Boolean(false)),
         string("null").map(|_| JsonValue::Null)
-    ).parse(input)
+    )).parse(input)
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
-    let escape =  oneof("\"\\/bfnrt").or(char('u').andl(skip(hex, 4)));
-    // let escape = (alt!(oneof("\"\\/bfnrt"), char('u')), skip(hex, 4));
-    let character = char('\\').andl(escape).or(not(char('"')).andr(anychar));
+    let escape = (alt((oneof("\"\\/bfnrt"), char('u'))), skip(hex, 4));
+    let character = alt((char('\\').andl(escape), not(char('"')).andr(anychar)));
     between(
         char('"'), 
         recognize(skip_many(character)).map(|i: &str| i.to_owned()),
