@@ -8,6 +8,7 @@ use crate::{
     Parser, 
     Error, 
     ParserIter, 
+    Alt
 };
 
 pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
@@ -274,6 +275,10 @@ where
             Err(_) => Ok((None, input))
         }
     }
+}
+
+pub fn alt<I, A: Alt<I>>(mut list: A) -> impl Parser<I, Output = A::Output, Error = A::Error> {
+    move |input: I| list.choice(input)
 }
 
 fn map_range<R: RangeBounds<usize>>(range: R) -> (Option<usize>, Option<usize>) {

@@ -80,8 +80,8 @@ fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
-    // let escape =  oneof("\"\\/bfnrt").or(char('u').andl(skip(hex, 4)));
-    let escape = (alt!(oneof("\"\\/bfnrt"), char('u')), skip(hex, 4));
+    let escape =  oneof("\"\\/bfnrt").or(char('u').andl(skip(hex, 4)));
+    // let escape = (alt!(oneof("\"\\/bfnrt"), char('u')), skip(hex, 4));
     let character = char('\\').andl(escape).or(not(char('"')).andr(anychar));
     between(
         char('"'), 
