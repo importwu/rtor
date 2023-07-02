@@ -131,21 +131,12 @@ where
         }
 
         match self.pos.cmp(&other.pos) {
-            // Ordering::Equal => {
-            //     self.errors.append(&mut other.errors);
-            //     self
-            // }
-            // Ordering::Greater => self,
-            // Ordering::Less => other
-            Ordering::Equal => self,
-            Ordering::Greater => {
-                self.errors.append(&mut other.errors);
-                self
-            },
-            Ordering::Less => {
+            Ordering::Equal => {
                 self.errors.append(&mut other.errors);
                 self
             }
+            Ordering::Greater => self,
+            Ordering::Less => other
         }
     }
 }
