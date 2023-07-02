@@ -6,24 +6,24 @@ use std::{
 
 use crate::{
     Input, 
-    Location, 
-    LocatedInput, 
+    Pos, 
+    State, 
     AsChar
 };
 
-pub trait Error<I: Input> {
+pub trait ParseError<I: Input> {
     fn unexpect(token: Option<I::Token>, input: I) -> Self;
     fn expect(message: &str, input: I) -> Self;
     fn merge(self, other: Self) -> Self;
 }
 
 #[derive(Debug)]
-pub enum ParseError<I: Input> {
+pub enum SimpleError<I: Input> {
     Unexpected(Option<I::Token>),
     Expected(String)
 }
 
-impl<I: Input> Error<I> for ParseError<I> {
+impl<I: Input> ParseError<I> for SimpleError<I> {
     fn unexpect(token: Option<I::Token>, _: I) -> Self {
         Self::Unexpected(token)
     }
@@ -37,7 +37,7 @@ impl<I: Input> Error<I> for ParseError<I> {
     }
 }
 
-impl<I> fmt::Display for ParseError<I> 
+impl<I> fmt::Display for SimpleError<I> 
 where
     I: Input,
     I::Token: fmt::Display
@@ -51,30 +51,30 @@ where
     }
 }
 
-impl<I: Input + fmt::Display + fmt::Debug> error::Error for ParseError<I> where I::Token: fmt::Display + fmt::Debug {}
+impl<I: Input + fmt::Display + fmt::Debug> error::Error for SimpleError<I> where I::Token: fmt::Display + fmt::Debug {}
 
 #[derive(Debug)]
-pub struct ParseErrors<I: Input> where I::Token: AsChar + fmt::Debug {
-    pub location: Location,
-    pub errors: Vec<ParseError<I>>
+pub struct MultiError<I: Input> where I::Token: AsChar + fmt::Debug {
+    pub pos: Pos,
+    pub errors: Vec<SimpleError<I>>
 }
 
-impl<I> Error<LocatedInput<I>> for ParseErrors<I> 
+impl<I> ParseError<State<I>> for MultiError<I> 
 where 
     I: Input,
     I::Token: AsChar + fmt::Debug
 {
-    fn unexpect(token: Option<I::Token>, input: LocatedInput<I>) -> Self {
+    fn unexpect(token: Option<I::Token>, input: State<I>) -> Self {
         Self { 
-            location: input.location(), 
-            errors: vec![ParseError::Unexpected(token)] 
+            pos: input.pos(), 
+            errors: vec![SimpleError::Unexpected(token)] 
         }
     }
     
-    fn expect(message: &str, input: LocatedInput<I>) -> Self {
+    fn expect(message: &str, input: State<I>) -> Self {
         Self { 
-            location: input.location(), 
-            errors: vec![ParseError::Expected(message.to_owned())] 
+            pos: input.pos(), 
+            errors: vec![SimpleError::Expected(message.to_owned())] 
         }
     }
 
@@ -87,7 +87,7 @@ where
             return other
         }
 
-        match self.location.cmp(&other.location) {
+        match self.pos.cmp(&other.pos) {
             Ordering::Equal => {
                 self.errors.append(&mut other.errors);
                 self
@@ -98,9 +98,9 @@ where
     }
 }
 
-impl<I: Input> fmt::Display for ParseErrors<I> where I::Token: AsChar + fmt::Debug + fmt::Display {
+impl<I: Input> fmt::Display for MultiError<I> where I::Token: AsChar + fmt::Debug + fmt::Display {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "parse error at line:{}, column:{}", self.location.line(), self.location.column())?;
+        writeln!(f, "parse error at line:{}, column:{}", self.pos.line(), self.pos.column())?;
         for error in self.errors.iter() {
             writeln!(f, "{}", error.to_string().as_str())?;
         }
@@ -108,4 +108,4 @@ impl<I: Input> fmt::Display for ParseErrors<I> where I::Token: AsChar + fmt::Deb
     }
 }
 
-impl<I: Input + fmt::Display + fmt::Debug> error::Error for ParseErrors<I> where I::Token: AsChar + fmt::Display + fmt::Debug {}
+impl<I: Input + fmt::Display + fmt::Debug> error::Error for MultiError<I> where I::Token: AsChar + fmt::Display + fmt::Debug {}

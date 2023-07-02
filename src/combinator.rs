@@ -6,7 +6,7 @@ use std::ops::{
 use crate::{
     Input, 
     Parser, 
-    Error, 
+    ParseError, 
     ParserIter, 
     Alt
 };
@@ -84,7 +84,7 @@ pub fn many_till<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output =
 where
     I: Input,
     A: Parser<I>,
-    A::Error: Error<I>,
+    A::Error: ParseError<I>,
     B: Parser<I, Error = A::Error>
 {
     move |input: I| {
@@ -135,7 +135,7 @@ pub fn skip_till<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output =
 where
     I: Input,
     A: Parser<I>,
-    A::Error: Error<I>,
+    A::Error: ParseError<I>,
     B: Parser<I, Error = A::Error>
 {
     move |input: I| {
@@ -250,12 +250,12 @@ pub fn not<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error>
 where
     I: Input,
     P: Parser<I>,
-    P::Error: Error<I>
+    P::Error: ParseError<I>
 {
     move |mut input: I| {
         match parser.parse(input.clone()) {
             Err(_) => Ok(((), input)),
-            Ok(_) => Err(Error::unexpect(input.peek(), input))
+            Ok(_) => Err(ParseError::unexpect(input.peek(), input))
         }
     }
 }
@@ -491,7 +491,7 @@ macro_rules! alt_parser_impl {
         where
             Input: super::Input,
             $a: Parser<Input>,
-            $a::Error: Error<Input>,
+            $a::Error: ParseError<Input>,
             $($rest: Parser<Input, Error = $a::Error, Output = $a::Output>),+
         {   
             type Output = $a::Output;

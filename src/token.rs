@@ -1,7 +1,7 @@
 use crate::{
     Parser,
     Input,
-    Error,
+    ParseError,
     AsChar,
     ParseResult,
     character::{
@@ -28,7 +28,7 @@ where
     I: Input,
     I::Token: AsChar,
     P: Parser<I, Error = E>,
-    E: Error<I>
+    E: ParseError<I>
 {
     let mut parser = skip_many(space).andr(parser);
     move |input: I| parser.parse(input)
@@ -39,7 +39,7 @@ where
     I: Input,
     I::Token: AsChar,
     P: Parser<I, Error = E>,
-    E: Error<I>
+    E: ParseError<I>
 {
     let mut parser = between(char('('), parser, symbol(char(')')));
     move |input: I| parser.parse(input)
@@ -50,7 +50,7 @@ where
     I: Input,
     I::Token: AsChar,
     P: Parser<I, Error = E>,
-    E: Error<I>
+    E: ParseError<I>
 {
     let mut parser = between(char('{'), parser, symbol(char('}')));
     move |input: I| parser.parse(input)
@@ -61,7 +61,7 @@ where
     I: Input,
     I::Token: AsChar,
     P: Parser<I, Error = E>,
-    E: Error<I>
+    E: ParseError<I>
 {
     let mut parser = between(char('<'), parser, symbol(char('>')));
     move |input: I| parser.parse(input)
@@ -72,7 +72,7 @@ where
     I: Input,
     I::Token: AsChar,
     P: Parser<I, Error = E>,
-    E: Error<I>
+    E: ParseError<I>
 {
     let mut parser = between(char('['), parser, symbol(char(']')));
     move |input: I| parser.parse(input)
@@ -83,7 +83,7 @@ where
     I: Input,
     I::Token: AsChar,
     P: Parser<I, Error = E>,
-    E: Error<I>
+    E: ParseError<I>
 {
     let mut parser = sepby(parser, symbol(char(',')));
     move |input: I| parser.parse(input)
@@ -94,7 +94,7 @@ where
     I: Input,
     I::Token: AsChar,
     P: Parser<I, Error = E>,
-    E: Error<I>
+    E: ParseError<I>
 {
     let mut parser = sepby1(parser, symbol(char(',')));
     move |input: I| parser.parse(input)
@@ -105,7 +105,7 @@ where
     I: Input,
     I::Token: AsChar,
     P: Parser<I, Error = E>,
-    E: Error<I>
+    E: ParseError<I>
 {
     let mut parser = sepby(parser, symbol(char(';')));
     move |input: I| parser.parse(input)
@@ -117,7 +117,7 @@ where
     I: Input,
     I::Token: AsChar,
     P: Parser<I, Error = E>,
-    E: Error<I>
+    E: ParseError<I>
 {
     let mut parser = sepby1(parser, symbol(char(';')));
     move |input: I| parser.parse(input)
@@ -127,7 +127,7 @@ pub fn number<I, E>(input: I) -> ParseResult<I, I, E>
 where
     I: Input,
     I::Token: AsChar,
-    E: Error<I>
+    E: ParseError<I>
 {
     let exponent = (alt((char('e'), char('E'))), opt(alt((char('+'), char('-')))), skip_many1(digit));
     let fraction = (char('.'), skip_many1(digit));

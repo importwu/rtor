@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use crate::{
     Input, 
-    Error
+    ParseError
 };
 
 pub trait Parser<I> {
@@ -150,7 +150,7 @@ where
     I: Input, 
     A: Parser<I>,
     B: Parser<I, Output = A::Output, Error = A::Error>,
-    A::Error: Error<I>
+    A::Error: ParseError<I>
 {
     type Output = A::Output;
     type Error = A::Error;
@@ -318,7 +318,7 @@ impl<I, P, E> Parser<I> for Expect<I, P, E>
 where
     I: Input,
     P: Parser<I>,
-    E: Error<I>
+    E: ParseError<I>
 {
     type Output = P::Output;
     type Error = E;
@@ -326,7 +326,7 @@ where
     fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
         match self.parser.parse(input.clone()) {
             Ok(t) => Ok(t),
-            Err(_) => Err(Error::expect(&self.message, input))
+            Err(_) => Err(ParseError::expect(&self.message, input))
         }
     }
 }

@@ -8,19 +8,19 @@ mod input;
 
 pub use self::{
     error::{
-        ParseError,
-        Error
+        SimpleError,
+        ParseError
     },
     parser::Parser,
     input::{
         Input,
-        Location,
-        LocatedInput
+        Pos,
+        State
     },
     iter::ParserIter
 };
 
-pub type ParseResult<O, I, E = ParseError<I>> = Result<(O, I), E>;
+pub type ParseResult<O, I, E = SimpleError<I>> = Result<(O, I), E>;
 
 pub trait AsChar {
     fn as_char(&self) -> char;

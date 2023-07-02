@@ -72,12 +72,12 @@ impl<'a, T: Clone> Input for &'a [T] {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Location {
+pub struct Pos {
     line: u64,
     column: u64,
 }
 
-impl Location {
+impl Pos {
     pub fn new() -> Self {
         Self {
             line: 1,
@@ -104,32 +104,32 @@ impl Location {
 }
 
 #[derive(Debug, Clone)]
-pub struct LocatedInput<I> {
-    inner: I,
-    location: Location
+pub struct State<I> {
+    input: I,
+    pos: Pos
 }
 
-impl<I> LocatedInput<I> {
-    pub fn new(inner: I) -> Self {
+impl<I> State<I> {
+    pub fn new(input: I) -> Self {
         Self {
-            inner,
-            location: Location::new()
+            input,
+            pos: Pos::new()
         }
     }
 
-    pub fn location(&self) -> Location {
-        self.location
+    pub fn pos(&self) -> Pos {
+        self.pos
     }
 }
 
-impl<I> Deref for LocatedInput<I> {
+impl<I> Deref for State<I> {
     type Target = I;
     fn deref(&self) -> &Self::Target {
-        &self.inner
+        &self.input
     }
 }
 
-impl<I> Input for LocatedInput<I> 
+impl<I> Input for State<I> 
 where 
     I: Input,
     I::Token: AsChar
@@ -138,23 +138,23 @@ where
     type Tokens = I::Tokens;
 
     fn next(&mut self) -> Option<Self::Token> {
-        let t = self.inner.next()?;
-        self.location.advance(t.as_char());
+        let t = self.input.next()?;
+        self.pos.advance(t.as_char());
         Some(t)
     }
 
     fn peek(&mut self) -> Option<Self::Token> {
-        self.inner.peek()
+        self.input.peek()
     }
 
     fn diff(&self, other: &Self) -> Self {
-        LocatedInput { 
-            inner: self.inner.diff(&other.inner), 
-            location: self.location
+        State { 
+            input: self.input.diff(&other.input), 
+            pos: self.pos
         }
     }
 
     fn tokens(&self) -> Self::Tokens {
-        self.inner.tokens()
+        self.input.tokens()
     }
 }
