@@ -80,11 +80,11 @@ where
     }
 }
 
-pub fn many_till<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = Vec<A::Output>, Error = A::Error> 
+pub fn many_till<I, S, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = Vec<A::Output>, Error = A::Error> 
 where
     I: Input,
     A: Parser<I>,
-    A::Error: ParseError<I>,
+    A::Error: ParseError<I, S>,
     B: Parser<I, Error = A::Error>
 {
     move |input: I| {
@@ -131,11 +131,11 @@ where
     }
 }
 
-pub fn skip_till<I, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = (), Error = A::Error> 
+pub fn skip_till<I, S, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = (), Error = A::Error> 
 where
     I: Input,
     A: Parser<I>,
-    A::Error: ParseError<I>,
+    A::Error: ParseError<I, S>,
     B: Parser<I, Error = A::Error>
 {
     move |input: I| {
@@ -246,11 +246,11 @@ where
     }
 }
 
-pub fn not<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error>
+pub fn not<I, S, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error>
 where
     I: Input,
     P: Parser<I>,
-    P::Error: ParseError<I>
+    P::Error: ParseError<I, S>
 {
     move |mut input: I| {
         match parser.parse(input.clone()) {
@@ -413,7 +413,7 @@ where
     }
 }
 
-pub fn alt<I, A: Alt<I>>(mut list: A) -> impl Parser<I, Output = A::Output, Error = A::Error> {
+pub fn alt<I: Input, S, A: Alt<I, S>>(mut list: A) -> impl Parser<I, Output = A::Output, Error = A::Error> {
     move |input: I| list.choice(input)
 }
 
@@ -487,11 +487,11 @@ tuple_parser!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U);
 
 macro_rules! alt_parser_impl {
     ($a: ident, $($rest: ident),+) => {
-        impl<Input, $a, $($rest),+> Alt<Input> for ($a, $($rest),+) 
+        impl<Input, Msg, $a, $($rest),+> Alt<Input, Msg> for ($a, $($rest),+) 
         where
             Input: super::Input,
             $a: Parser<Input>,
-            $a::Error: ParseError<Input>,
+            $a::Error: ParseError<Input, Msg>,
             $($rest: Parser<Input, Error = $a::Error, Output = $a::Output>),+
         {   
             type Output = $a::Output;

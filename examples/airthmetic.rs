@@ -11,8 +11,8 @@ use rtor::{
 };
 
 fn main() {
-    let v = symbol(expr).map(|e| e.eval()).parse("1 + 2 * ( 3 + 4 ) + 5 * 6").unwrap().0;
-    assert_eq!(v, 45.0)
+    let v = symbol(expr).map(|e| e.eval()).parse("1 + 2 * ( 3 + 4 ) + 5 * 6");
+    assert_eq!(v, Ok((45.0, "")));
 }
 
 #[derive(Debug)]
