@@ -22,7 +22,6 @@ pub use self::{
 };
 
 pub type ParseResult<O, I, E = SimpleError<I, String>> = Result<(O, I), E>;
-pub type MultiResult<O, I, E = MultiError<I, String>> = Result<(O, State<I>), E>;
 
 pub trait AsChar {
     fn as_char(&self) -> char;
@@ -80,16 +79,4 @@ pub trait Alt<I: Input, S> {
     type Error: ParseError<I, S>;
     
     fn choice(&mut self, input: I) -> Result<(Self::Output, I), Self::Error>;
-}
-
-#[derive(Debug)]
-pub enum Fuck {
-    F(i32)
-}
-
-
-#[test]
-fn test() {
-    let r: MultiResult<State<&str>, &str> = char::string("133").or(char::string("123")).parse(State::new("124"));
-    println!("{:?}", r)
 }
