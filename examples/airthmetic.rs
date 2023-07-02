@@ -6,7 +6,7 @@ use rtor::{
         number,
         parens
     },
-    character::char, 
+    char::char, 
     combinator::alt
 };
 

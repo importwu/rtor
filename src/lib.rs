@@ -1,6 +1,6 @@
 mod parser;
 mod error;
-pub mod character;
+pub mod char;
 pub mod combinator;
 pub mod token;
 mod iter;

@@ -4,7 +4,7 @@ use crate::{
     ParseError,
     AsChar,
     ParseResult,
-    character::{
+    char::{
         char,
         ascii::{
             space,

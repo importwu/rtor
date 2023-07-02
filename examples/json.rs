@@ -10,7 +10,7 @@ use rtor::{
         comma_sep,
         number
     },
-    character::{
+    char::{
         oneof,
         ascii::hex, 
         eof, 

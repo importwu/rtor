@@ -73,8 +73,8 @@ impl<'a, T: Clone> Input for &'a [T] {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Pos {
-    line: u64,
-    column: u64,
+    line: usize,
+    column: usize,
 }
 
 impl Pos {
@@ -86,19 +86,20 @@ impl Pos {
     }
 
     pub fn advance(&mut self, ch: char) {
-        if ch == '\n' {
-            self.line += 1;
-            self.column = 1;
-        }else {
-            self.column += 1;
+        match ch {
+            '\n' => {
+                self.line += 1; 
+                self.column = 1;
+            }
+            _ => self.column += 1
         }
     }
 
-    pub fn line(&self) -> u64 {
+    pub fn line(&self) -> usize {
         self.line
     }
 
-    pub fn column(&self) -> u64 {
+    pub fn column(&self) -> usize {
         self.column
     }
 }
