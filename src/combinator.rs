@@ -7,6 +7,7 @@ use crate::{
     Input, 
     Parser, 
     ParseError, 
+    ParseResult,
     ParserIter, 
     Alt
 };
@@ -157,7 +158,7 @@ where
     }
 }
 
-pub fn sepby<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn sep_by<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>, 
@@ -174,7 +175,7 @@ where
     }
 }
 
-pub fn sepby1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn sep_by1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>, 
@@ -189,7 +190,7 @@ where
     }
 }
 
-pub fn endby<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn end_by<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>, 
@@ -206,7 +207,7 @@ where
     }
 }
 
-pub fn endby1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn end_by1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
 where
     I: Input,
     P: Parser<I>, 
@@ -275,6 +276,34 @@ where
             Err(_) => Ok((None, input))
         }
     }
+}
+
+pub fn eof<I, S, E>(mut input: I) ->  ParseResult<(), I, E>
+where
+    I: Input,
+    E: ParseError<I, S>
+{
+    match input.peek() {
+        None => Ok(((), input)),
+        Some(t) => Err(ParseError::unexpect(Some(t), input))
+    }
+}
+
+pub fn error<I, S, E>(mut input: I) -> ParseResult<(), I, E> 
+where
+    I: Input,
+    E: ParseError<I, S>
+{
+    Err(ParseError::unexpect(input.peek(), input))
+}
+
+pub fn pure<I, S, E, T>(t: T) -> impl Parser<I, Output = T, Error = E> 
+where
+    I: Input,
+    T: Clone,
+    E: ParseError<I, S>
+{
+    move|input: I| Ok((t.clone(), input))
 }
 
 fn map_range<R: RangeBounds<usize>>(range: R) -> (Option<usize>, Option<usize>) {

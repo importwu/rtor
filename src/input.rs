@@ -9,7 +9,7 @@ use crate::AsChar;
 
 pub trait Input: Clone {
     type Token: Clone;
-    type Tokens: Iterator<Item = Self::Token>;
+    type Buffer;
 
     fn next(&mut self) -> Option<Self::Token>;
 
@@ -17,13 +17,12 @@ pub trait Input: Clone {
 
     fn diff(&self, other: &Self) -> Self;
 
-    fn tokens(&self) -> Self::Tokens;
-
+    fn as_buf(&self) -> Self::Buffer;
 }
 
 impl<'a> Input for &'a str {
     type Token = char;
-    type Tokens = Chars<'a>;
+    type Buffer = &'a str;
 
     fn next(&mut self) -> Option<Self::Token> {
         let mut chars = self.chars();
@@ -41,15 +40,15 @@ impl<'a> Input for &'a str {
         &self[..offset]
     }
 
-    fn tokens(&self) -> Self::Tokens {
-        self.chars()
+    fn as_buf(&self) -> Self::Buffer {
+        self
     }
 }
 
 impl<'a, T: Clone> Input for &'a [T] {
     type Token = T;
-    type Tokens = Cloned<Iter<'a, T>>;
-    
+    type Buffer = &'a [T];
+
     fn next(&mut self) -> Option<Self::Token> {
         let mut iter = self.iter();
         let item = iter.next()?.clone();
@@ -65,9 +64,9 @@ impl<'a, T: Clone> Input for &'a [T] {
         let offset = other.as_ptr() as usize - self.as_ptr() as usize;
         &self[..offset]
     }
-    
-    fn tokens(&self) -> Self::Tokens {
-        self.iter().cloned()
+
+    fn as_buf(&self) -> Self::Buffer {
+        self
     }
 }
 
@@ -123,20 +122,13 @@ impl<I> State<I> {
     }
 }
 
-impl<I> Deref for State<I> {
-    type Target = I;
-    fn deref(&self) -> &Self::Target {
-        &self.input
-    }
-}
-
 impl<I> Input for State<I> 
 where 
     I: Input,
     I::Token: AsChar
 {
     type Token = I::Token;
-    type Tokens = I::Tokens;
+    type Buffer = I::Buffer;
 
     fn next(&mut self) -> Option<Self::Token> {
         let t = self.input.next()?;
@@ -155,7 +147,7 @@ where
         }
     }
 
-    fn tokens(&self) -> Self::Tokens {
-        self.input.tokens()
+    fn as_buf(&self) -> Self::Buffer {
+        self.input.as_buf()
     }
 }

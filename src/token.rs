@@ -15,8 +15,8 @@ use crate::{
         skip_many,
         skip_many1,
         between,
-        sepby,
-        sepby1,
+        sep_by,
+        sep_by1,
         recognize,
         opt,
         alt
@@ -85,7 +85,7 @@ where
     P: Parser<I, Error = E>,
     E: ParseError<I, S>
 {
-    let mut parser = sepby(parser, symbol(char(',')));
+    let mut parser = sep_by(parser, symbol(char(',')));
     move |input: I| parser.parse(input)
 }
 
@@ -96,7 +96,7 @@ where
     P: Parser<I, Error = E>,
     E: ParseError<I, S>
 {
-    let mut parser = sepby1(parser, symbol(char(',')));
+    let mut parser = sep_by1(parser, symbol(char(',')));
     move |input: I| parser.parse(input)
 }
 
@@ -107,7 +107,7 @@ where
     P: Parser<I, Error = E>,
     E: ParseError<I, S>
 {
-    let mut parser = sepby(parser, symbol(char(';')));
+    let mut parser = sep_by(parser, symbol(char(';')));
     move |input: I| parser.parse(input)
 }
 
@@ -119,7 +119,7 @@ where
     P: Parser<I, Error = E>,
     E: ParseError<I, S>
 {
-    let mut parser = sepby1(parser, symbol(char(';')));
+    let mut parser = sep_by1(parser, symbol(char(';')));
     move |input: I| parser.parse(input)
 }
 

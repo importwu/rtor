@@ -55,6 +55,7 @@ where
 pub fn sat<I, S, E, F>(mut pred: F) -> impl Parser<I, Output = I::Token, Error = E> 
 where
     I: Input,
+    I::Token: AsChar,
     F: FnMut(&I::Token) -> bool,
     E: ParseError<I, S>
 {
@@ -93,6 +94,15 @@ where
     char('\t').parse(input)
 }
 
+pub fn eol<I, S, E>(input: I) -> ParseResult<I, I, E>
+where
+    I: Input,
+    I::Token: AsChar,
+    E: ParseError<I, S>
+{
+    string("\n").or(string("\r\n")).parse(input)
+}
+
 pub fn anychar<I, S, E>(input: I) -> ParseResult<I::Token, I, E> 
 where
     I: Input,
@@ -102,50 +112,24 @@ where
     sat(|_| true).parse(input)
 }
 
-pub fn oneof<I, S, E, F>(tokens: F) -> impl Parser<I, Output = I::Token, Error = E> 
+pub fn one_of<I, S, E, F>(tokens: F) -> impl Parser<I, Output = I::Token, Error = E> 
 where
     I: Input,
+    I::Token: AsChar,
     F: FindToken<I::Token>,
     E: ParseError<I, S>
 {
     sat(move|t: &I::Token| tokens.find_token(t))
 }
 
-pub fn noneof<I, S, E, F>(tokens: F) -> impl Parser<I, Output = I::Token, Error = E> 
+pub fn none_of<I, S, E, F>(tokens: F) -> impl Parser<I, Output = I::Token, Error = E> 
 where
     I: Input,
+    I::Token: AsChar,
     F: FindToken<I::Token>,
     E: ParseError<I, S>
 {
     sat(move|t: &I::Token| !tokens.find_token(t))
-}
-
-pub fn eof<I, S, E>(mut input: I) ->  ParseResult<(), I, E>
-where
-    I: Input,
-    E: ParseError<I, S>
-{
-    match input.peek() {
-        None => Ok(((), input)),
-        Some(t) => Err(ParseError::unexpect(Some(t), input))
-    }
-}
-
-pub fn error<I, S, E>(mut input: I) -> ParseResult<(), I, E> 
-where
-    I: Input,
-    E: ParseError<I, S>
-{
-    Err(ParseError::unexpect(input.peek(), input))
-}
-
-pub fn pure<I, S, E, T>(t: T) -> impl Parser<I, Output = T, Error = E> 
-where
-    I: Input,
-    T: Clone,
-    E: ParseError<I, S>
-{
-    move|input: I| Ok((t.clone(), input))
 }
 
 pub mod ascii {

@@ -11,9 +11,8 @@ use rtor::{
         number
     },
     char::{
-        oneof,
+        one_of,
         ascii::hex, 
-        eof, 
         anychar,
         char,
         string
@@ -25,7 +24,8 @@ use rtor::{
         skip_many, 
         recognize, 
         not,
-        alt
+        alt,
+        eof,
     }, 
 };
 
@@ -79,7 +79,7 @@ fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
-    let escape = (alt((oneof("\"\\/bfnrt"), char('u'))), skip(hex, 4));
+    let escape = (alt((one_of("\"\\/bfnrt"), char('u'))), skip(hex, 4));
     let character = alt((char('\\').andl(escape), not(char('"')).andr(anychar)));
     between(
         char('"'), 
