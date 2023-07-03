@@ -42,7 +42,7 @@ fn main() {
                 "ialcqh": 1377465553.898079,
                 "oozscfql": "spWyychnqYA5R"
             },
-            [1959856920, true, false],
+            [1959856920, true, false, "\u1234"],
             true
         ],
         "yvfuqw": "V",
@@ -75,7 +75,7 @@ fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
         string("true").map(|_| JsonValue::Boolean(true)),
         string("false").map(|_| JsonValue::Boolean(false)),
         string("null").map(|_| JsonValue::Null)
-    )).parse(input)
+    ))(input)
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
@@ -85,6 +85,6 @@ fn key(input: &str) -> ParseResult<String, &str> {
         char('"'), 
         recognize(skip_many(character)).map(|i: &str| i.to_owned()),
         char('"')
-    ).parse(input)
+    )(input)
 }
 

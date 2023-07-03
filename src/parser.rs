@@ -5,7 +5,7 @@ use crate::{
     ParseError
 };
 
-//A trait for parser
+///A trait for parser
 pub trait Parser<I> {
     type Output;
     type Error;

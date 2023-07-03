@@ -12,7 +12,32 @@ use crate::{
     Alt
 };
 
-pub fn opt<I, P>(mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
+
+
+#[test]
+fn test() {
+    let mut parser = opt(super::char::char('a'));
+    let result: ParseResult<Option<char>, &str> = parser.parse("abc");
+    let a =  Ok::<i32, i32>(2);
+}
+
+
+/// Apply `parser`, if fails, returns [`None`] without cosuming input, otherwise 
+/// returns [`Some`] the value returned by `parser`.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser};
+/// use rtor::char::char;
+/// use rtor::combinator::opt;
+/// 
+/// fn parser(i: &str) -> ParseResult<Option<char>, &str> {
+///     opt(char('a'))(i)
+/// }
+/// 
+/// assert_eq!(parser("abc"), Ok((Some('a'), "bc")));
+/// assert_eq!(parser("bbc"), Ok((None, "bbc")))
+/// ```
+pub fn opt<I, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, P::Error>
 where
     I: Input,
     P: Parser<I>
@@ -25,31 +50,45 @@ where
     }
 }
 
-pub fn between<I, L, M, R>(mut left: L, mut middle: M, mut right: R) -> impl Parser<I, Output = M::Output, Error = L::Error> 
+/// Apply `parser` between `left` parser and `right` parser, the value returned by `parser`.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser};
+/// use rtor::char::char;
+/// use rtor::combinator::between;
+/// 
+/// fn parser(i: &str) -> ParseResult<char, &str> {
+///     between(char('a'), char('b'), char('c'))(i)
+/// }
+/// 
+/// assert_eq!(parser("abc"), Ok(('b', "")))
+/// ```
+pub fn between<I, L, P, R>(mut left: L, mut parser: P, mut right: R) -> impl FnMut(I) -> ParseResult<P::Output, I, L::Error>
 where
     I: Input,
     L: Parser<I>,
-    M: Parser<I, Error = L::Error>,
+    P: Parser<I, Error = L::Error>,
     R: Parser<I, Error = L::Error>
 {
     move |input: I| {
         let (_, i) = left.parse(input)?;
-        let (o, i)= middle.parse(i)?;
+        let (o, i)= parser.parse(i)?;
         let (_, i) = right.parse(i)?;
         Ok((o, i))
     }
 }
 
-pub fn pair<I, L, M, R>(mut left: L, mut middle: M, mut right: R) ->  impl Parser<I, Output = (L::Output, R::Output), Error = L::Error>
+
+pub fn pair<I, L, P, R>(mut left: L, mut parser: P, mut right: R) ->  impl FnMut(I) -> ParseResult<(L::Output, R::Output), I, L::Error>
 where 
     I: Input,
     L: Parser<I>,
-    M: Parser<I, Error = L::Error>,
+    P: Parser<I, Error = L::Error>,
     R: Parser<I, Error = L::Error>
 {
     move |input: I| {
         let (o1, i) = left.parse(input)?;
-        let (_, i) = middle.parse(i)?;
+        let (_, i) = parser.parse(i)?;
         let (o2, i) = right.parse(i)?;
         Ok(((o1, o2), i))
     }
@@ -442,7 +481,7 @@ where
     }
 }
 
-pub fn alt<I: Input, S, A: Alt<I, S>>(mut list: A) -> impl Parser<I, Output = A::Output, Error = A::Error> {
+pub fn alt<I: Input, S, A: Alt<I, S>>(mut list: A) -> impl FnMut(I) -> ParseResult<A::Output, I, A::Error> {
     move |input: I| list.choice(input)
 }
 

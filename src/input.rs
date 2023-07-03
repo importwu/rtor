@@ -1,10 +1,3 @@
-use std::{
-    str::Chars, 
-    slice::Iter, 
-    iter::Cloned,
-    ops::Deref
-};
-
 use crate::AsChar;
 
 pub trait Input: Clone {
