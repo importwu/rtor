@@ -2,15 +2,15 @@ use std::marker::PhantomData;
 
 use crate::{
     Input, 
-    ParseError
+    ParseError,
+    ParseResult
 };
 
 ///A trait for parser
-pub trait Parser<I> {
+pub trait Parser<I, E> {
     type Output;
-    type Error;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error>;
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E>;
 
     fn map<F, R>(self, f: F) -> Map<Self, F>
     where 
@@ -20,12 +20,12 @@ pub trait Parser<I> {
         Map { parser: self, f }
     }
 
-    fn map_err<F, R>(self, f: F) -> MapErr<Self, F> 
+    fn map_err<F, R>(self, f: F) -> MapErr<E, Self, F> 
     where
-        F: FnMut(Self::Error) -> R,
+        F: FnMut(E) -> R,
         Self: Sized
     {
-        MapErr { parser: self, f }
+        MapErr { parser: self, f, marker: PhantomData }
     }
 
     fn or<P, S>(self, second: P) -> Or<S, Self, P> where Self: Sized {
@@ -76,17 +76,16 @@ pub trait Parser<I> {
         RefMut { parser: self }
     }
 
-    fn expect<S>(self, message: S) -> Expect<S, Self, Self::Error> where Self: Sized {
+    fn expect<S>(self, message: S) -> Expect<E, S, Self> where Self: Sized {
         Expect { parser: self, message, marker: PhantomData }
     }
 
 }
 
-impl<F, O, I, E> Parser<I> for F where F: FnMut(I) -> Result<(O, I), E> {
+impl<F, O, I, E> Parser<I, E> for F where F: FnMut(I) -> ParseResult<O, I, E> {
     type Output = O;
-    type Error = E;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         (self)(input)
     }
 }
@@ -97,35 +96,34 @@ pub struct Map<P, F> {
     f: F,
 }
 
-impl<I, P, F, R> Parser<I> for Map<P, F> 
+impl<I, E, P, F, R> Parser<I, E> for Map<P, F> 
 where
-    P: Parser<I>,
+    P: Parser<I, E>,
     F: FnMut(P::Output) -> R
 {
     type Output = R;
-    type Error = P::Error;
 
-    fn parse(&mut self, input: I) ->  Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         let (o, i) = self.parser.parse(input)?;
         Ok(((self.f)(o), i))
     }
 }
 
 #[derive(Clone)]
-pub struct MapErr<P, F> {
+pub struct MapErr<E, P, F> {
     parser: P,
     f: F,
+    marker: PhantomData<E>
 }
 
-impl<I, P, F, R> Parser<I> for MapErr<P, F> 
+impl<I, E, P, F, R> Parser<I, R> for MapErr<E, P, F> 
 where
-    P: Parser<I>,
-    F: FnMut(P::Error) -> R
+    P: Parser<I, E>,
+    F: FnMut(E) -> R
 {
     type Output = P::Output;
-    type Error = R;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, R> {
         match self.parser.parse(input) {
             Ok(t) => Ok(t),
             Err(e) => Err((self.f)(e))
@@ -140,17 +138,16 @@ pub struct Or<S, A, B> {
     marker: PhantomData<S>
 }
 
-impl<I, S, A, B> Parser<I> for Or<S, A, B> 
+impl<I, E, S, A, B> Parser<I, E> for Or<S, A, B> 
 where
     I: Input, 
-    A: Parser<I>,
-    B: Parser<I, Output = A::Output, Error = A::Error>,
-    A::Error: ParseError<I, S>
+    A: Parser<I, E>,
+    B: Parser<I, E, Output = A::Output>,
+    E: ParseError<I, S>
 {
     type Output = A::Output;
-    type Error = A::Error;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         match self.first.parse(input.clone()) {
             Ok(t) => Ok(t),
             Err(e1) => match self.second.parse(input) {
@@ -167,15 +164,14 @@ pub struct Andl<A, B> {
     second: B
 }
 
-impl<I, A, B> Parser<I> for Andl<A, B> 
+impl<I, E, A, B> Parser<I, E> for Andl<A, B> 
 where
-    A: Parser<I>,
-    B: Parser<I, Error = A::Error>
+    A: Parser<I, E>,
+    B: Parser<I, E>
 {
     type Output = A::Output;
-    type Error = A::Error;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         let (o, i) = self.first.parse(input)?;
         let (_, i) = self.second.parse(i)?;
         Ok((o, i))
@@ -188,15 +184,14 @@ pub struct Andr<A, B> {
     second: B,
 }
 
-impl<I, A, B> Parser<I> for Andr<A, B> 
+impl<I, E, A, B> Parser<I, E> for Andr<A, B> 
 where
-    A: Parser<I>,
-    B: Parser<I, Error = A::Error>
+    A: Parser<I, E>,
+    B: Parser<I, E>
 {
     type Output = B::Output;
-    type Error = A::Error;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         let (_, i) = self.first.parse(input)?;
         self.second.parse(i)
     }
@@ -208,15 +203,14 @@ pub struct And<A, B> {
     second: B,
 }
 
-impl<I, A, B> Parser<I> for And<A, B> 
+impl<I, E, A, B> Parser<I, E> for And<A, B> 
 where
-    A: Parser<I>,
-    B: Parser<I, Error = A::Error>
+    A: Parser<I, E>,
+    B: Parser<I, E>
 {
     type Output = (A::Output, B::Output);
-    type Error = A::Error;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         let (o1, i) = self.first.parse(input)?;
         let (o2, i) = self.second.parse(i)?;
         Ok(((o1, o2), i))
@@ -229,16 +223,15 @@ pub struct AndThen<P, F> {
     f: F,
 }
 
-impl<I, A, B, F> Parser<I> for AndThen<A, F> 
+impl<I, E, A, B, F> Parser<I, E> for AndThen<A, F> 
 where
-    A: Parser<I>,
-    B: Parser<I, Error = A::Error>,
+    A: Parser<I, E>,
+    B: Parser<I, E>,
     F: FnMut(A::Output) -> B
 {
     type Output = B::Output;
-    type Error = B::Error;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         let (o, i) = self.parser.parse(input)?;
         (self.f)(o).parse(i)
     }
@@ -249,14 +242,13 @@ pub struct Ignore<P> {
     parser: P,
 }
 
-impl<I, P> Parser<I> for Ignore<P> 
+impl<I, E, P> Parser<I, E> for Ignore<P> 
 where
-    P: Parser<I>
+    P: Parser<I, E>
 {
     type Output = ();
-    type Error = P::Error;
     
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         let (_, i) = self.parser.parse(input)?;
         Ok(((), i))
     }
@@ -266,36 +258,34 @@ pub struct RefMut<'a, P> {
     parser: &'a mut P,
 }
 
-impl<I, P> Parser<I> for RefMut<'_, P> 
+impl<I, E, P> Parser<I, E> for RefMut<'_, P> 
 where
-    P: Parser<I>
+    P: Parser<I, E>
 {
     type Output = P::Output;
-    type Error = P::Error;
     
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         self.parser.parse(input)
     }
 }
 
 #[derive(Clone)]
-pub struct Expect<S, P, E> {
+pub struct Expect<E, S, P> {
     parser: P,
     message: S,
     marker: PhantomData<E>
 }
 
-impl<I, S, P, E> Parser<I> for Expect<S, P, E> 
+impl<I, E, S, P> Parser<I, E> for Expect<E, S, P> 
 where
     I: Input,
-    P: Parser<I>,
     E: ParseError<I, S>,
+    P: Parser<I, E>,
     S: Clone
 {
     type Output = P::Output;
-    type Error = E;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         match self.parser.parse(input.clone()) {
             Ok(t) => Ok(t),
             Err(_) => Err(ParseError::expect(self.message.clone(), input))
@@ -309,17 +299,16 @@ pub struct Chainl1<A, B> {
     op: B,
 }
 
-impl<I, A, B, F> Parser<I> for Chainl1<A, B> 
+impl<I, E, A, B, F> Parser<I, E> for Chainl1<A, B> 
 where
     I: Input,
-    A: Parser<I>,
-    B: Parser<I, Output = F, Error = A::Error>,
+    A: Parser<I, E>,
+    B: Parser<I, E, Output = F>,
     F: Fn(A::Output, A::Output) -> A::Output
 {
     type Output = A::Output;
-    type Error = A::Error;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         let (mut left, mut input) = self.parser.parse(input)?;
         while let Ok((f, i)) = self.op.parse(input.clone()) {
             let (right, i) = self.parser.parse(i)?;
@@ -337,18 +326,17 @@ pub struct Chainl<A, B, V> {
     value: V
 }
 
-impl<I, A, B, F> Parser<I> for Chainl<A, B, A::Output> 
+impl<I, E, A, B, F> Parser<I, E> for Chainl<A, B, A::Output> 
 where
     I: Input,
-    A: Parser<I>,
+    A: Parser<I, E>,
     A::Output: Clone,
-    B: Parser<I, Output = F, Error = A::Error>,
+    B: Parser<I, E, Output = F>,
     F: Fn(A::Output, A::Output) -> A::Output
 {
     type Output = A::Output;
-    type Error = A::Error;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         let (mut left, mut input) = match self.parser.parse(input.clone()) {
             Ok(t) => t,
             Err(_) => return Ok((self.value.clone(), input))
@@ -368,17 +356,16 @@ pub struct Chainr1<A, B> {
     op: B,
 }
 
-impl<I, A, B, F> Parser<I> for Chainr1<A, B> 
+impl<I, E, A, B, F> Parser<I, E> for Chainr1<A, B> 
 where
     I: Input,
-    A: Parser<I>,
-    B: Parser<I, Output = F, Error = A::Error>,
+    A: Parser<I, E>,
+    B: Parser<I, E, Output = F>,
     F: Fn(A::Output, A::Output) -> A::Output
 {
     type Output = A::Output;
-    type Error = A::Error;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         let (mut left, mut input) = self.parser.parse(input)?;
         while let Ok((f, i)) = self.op.parse(input.clone()) {
             let (right, i) = self.parse(i)?;
@@ -396,18 +383,17 @@ pub struct Chainr<A, B, V> {
     value: V,
 }
 
-impl<I, A, B, F> Parser<I> for Chainr<A, B, A::Output> 
+impl<I, E, A, B, F> Parser<I, E> for Chainr<A, B, A::Output> 
 where
     I: Input,
-    A: Parser<I>,
+    A: Parser<I, E>,
     A::Output: Clone,
-    B: Parser<I, Output = F, Error = A::Error>,
+    B: Parser<I, E, Output = F>,
     F: Fn(A::Output, A::Output) -> A::Output
 {
     type Output = A::Output;
-    type Error = A::Error;
 
-    fn parse(&mut self, input: I) -> Result<(Self::Output, I), Self::Error> {
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         let (mut left, mut input) = match self.parser.parse(input.clone()) {
             Ok(t) => t,
             Err(_) => return Ok((self.value.clone(), input))

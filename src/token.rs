@@ -23,88 +23,88 @@ use crate::{
     }, 
 }; 
 
-pub fn symbol<I, S, E, P>(parser: P) -> impl Parser<I, Output = P::Output, Error = E> 
+pub fn symbol<I, E, S, P>(parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
 where
     I: Input,
     I::Token: AsChar,
-    P: Parser<I, Error = E>,
+    P: Parser<I, E>,
     E: ParseError<I, S>
 {
     let mut parser = skip_many(space).andr(parser);
     move |input: I| parser.parse(input)
 }
 
-pub fn parens<I, S, E, P>(parser: P) -> impl Parser<I, Output = P::Output, Error = E> 
+pub fn parens<I, E, S, P>(parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
 where
     I: Input,
     I::Token: AsChar,
-    P: Parser<I, Error = E>,
+    P: Parser<I, E>,
     E: ParseError<I, S>
 {
     let mut parser = between(char('('), parser, symbol(char(')')));
     move |input: I| parser.parse(input)
 }
 
-pub fn braces<I, S, E, P>(parser: P) -> impl Parser<I, Output = P::Output, Error = E> 
+pub fn braces<I, E, S, P>(parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
 where
     I: Input,
     I::Token: AsChar,
-    P: Parser<I, Error = E>,
+    P: Parser<I, E>,
     E: ParseError<I, S>
 {
     let mut parser = between(char('{'), parser, symbol(char('}')));
     move |input: I| parser.parse(input)
 }
 
-pub fn angles<I, S, E, P>(parser: P) -> impl Parser<I, Output = P::Output, Error = E> 
+pub fn angles<I, E, S, P>(parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
 where
     I: Input,
     I::Token: AsChar,
-    P: Parser<I, Error = E>,
+    P: Parser<I, E>,
     E: ParseError<I, S>
 {
     let mut parser = between(char('<'), parser, symbol(char('>')));
     move |input: I| parser.parse(input)
 }
 
-pub fn brackets<I, S, E, P>(parser: P) -> impl Parser<I, Output = P::Output, Error = E> 
+pub fn brackets<I, E, S, P>(parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
 where
     I: Input,
     I::Token: AsChar,
-    P: Parser<I, Error = E>,
+    P: Parser<I, E>,
     E: ParseError<I, S>
 {
     let mut parser = between(char('['), parser, symbol(char(']')));
     move |input: I| parser.parse(input)
 }
 
-pub fn comma_sep<I, S, E, P>(parser: P) -> impl Parser<I, Output = Vec<P::Output>, Error = E> 
+pub fn comma_sep<I, E, S, P>(parser: P) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>
 where
     I: Input,
     I::Token: AsChar,
-    P: Parser<I, Error = E>,
+    P: Parser<I, E>,
     E: ParseError<I, S>
 {
     let mut parser = sep_by(parser, symbol(char(',')));
     move |input: I| parser.parse(input)
 }
 
-pub fn comma_sep1<I, S, E, P>(parser: P) -> impl Parser<I, Output = Vec<P::Output>, Error = E> 
+pub fn comma_sep1<I, E, S, P>(parser: P) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
     I::Token: AsChar,
-    P: Parser<I, Error = E>,
+    P: Parser<I, E>,
     E: ParseError<I, S>
 {
     let mut parser = sep_by1(parser, symbol(char(',')));
     move |input: I| parser.parse(input)
 }
 
-pub fn semi_sep<I, S, E, P>(parser: P) -> impl Parser<I, Output = Vec<P::Output>, Error = E> 
+pub fn semi_sep<I, E, S, P>(parser: P) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>
 where
     I: Input,
     I::Token: AsChar,
-    P: Parser<I, Error = E>,
+    P: Parser<I, E>,
     E: ParseError<I, S>
 {
     let mut parser = sep_by(parser, symbol(char(';')));
@@ -112,18 +112,18 @@ where
 }
 
 
-pub fn semi_sep1<I, S, E, P>(parser: P) -> impl Parser<I, Output = Vec<P::Output>, Error = E> 
+pub fn semi_sep1<I, E, S, P>(parser: P) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
     I::Token: AsChar,
-    P: Parser<I, Error = E>,
+    P: Parser<I, E>,
     E: ParseError<I, S>
 {
     let mut parser = sep_by1(parser, symbol(char(';')));
     move |input: I| parser.parse(input)
 }
 
-pub fn number<I, S, E>(input: I) -> ParseResult<I, I, E>
+pub fn number<I, E, S>(input: I) -> ParseResult<I, I, E>
 where
     I: Input,
     I::Token: AsChar,

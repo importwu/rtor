@@ -7,7 +7,7 @@ use crate::{
     ParseError
 };
 
-pub fn char<I, S, E>(ch: char) -> impl Parser<I, Output = I::Token, Error = E> 
+pub fn char<I, E, S>(ch: char) -> impl FnMut(I) -> ParseResult<I::Token, I, E>
 where
     I: Input,
     I::Token: AsChar,
@@ -16,7 +16,7 @@ where
     sat(move |t: &I::Token| t.as_char() == ch)
 }
 
-pub fn string<I, S, E>(string: &str) -> impl Parser<I, Output = I, Error = E> + '_ 
+pub fn string<I, E, S>(string: &str) -> impl FnMut(I) -> ParseResult<I, I, E> + '_ 
 where
     I: Input,
     I::Token: AsChar,
@@ -26,7 +26,7 @@ where
         let src = input.clone();
 
         for ch in string.chars() {
-            let (_, i) = char(ch).parse(input)?;
+            let (_, i) = char(ch)(input)?;
             input = i;
         }
         
@@ -34,7 +34,7 @@ where
     }
 }
 
-pub fn string_no_case<I, S, E>(string: &str) -> impl Parser<I, Output = I, Error = E> + '_ 
+pub fn string_no_case<I, E, S>(string: &str) -> impl FnMut(I) -> ParseResult<I, I, E> + '_ 
 where
     I: Input,
     I::Token: AsChar,
@@ -44,7 +44,7 @@ where
         let src = input.clone();
 
         for ch in string.chars() {
-            let (_, i) = sat(|t: &I::Token| t.as_char().eq_ignore_ascii_case(&ch)).parse(input)?;
+            let (_, i) = sat(|t: &I::Token| t.as_char().eq_ignore_ascii_case(&ch))(input)?;
             input = i;
         }
         
@@ -52,7 +52,7 @@ where
     }
 }
 
-pub fn sat<I, S, E, F>(mut pred: F) -> impl Parser<I, Output = I::Token, Error = E> 
+pub fn sat<I, E, S, F>(mut pred: F) -> impl FnMut(I) -> ParseResult<I::Token, I, E> 
 where
     I: Input,
     I::Token: AsChar,
@@ -67,34 +67,34 @@ where
     }
 }
 
-pub fn newline<I, S, E>(input: I) -> ParseResult<I::Token, I, E>
+pub fn newline<I, E, S>(input: I) -> ParseResult<I::Token, I, E>
 where
     I: Input,
     I::Token: AsChar,
     E: ParseError<I, S>
 {
-    char('\n').parse(input)
+    char('\n')(input)
 }
 
-pub fn crlf<I, S, E>(input: I) -> ParseResult<I, I, E>
+pub fn crlf<I, E, S>(input: I) -> ParseResult<I, I, E>
 where
     I: Input,
     I::Token: AsChar,
     E: ParseError<I, S>
 {
-    string("\r\n").parse(input)
+    string("\r\n")(input)
 }
 
-pub fn tab<I, S, E>(input: I) -> ParseResult<I::Token, I, E>
+pub fn tab<I, E, S>(input: I) -> ParseResult<I::Token, I, E>
 where
     I: Input,
     I::Token: AsChar,
     E: ParseError<I, S>
 {
-    char('\t').parse(input)
+    char('\t')(input)
 }
 
-pub fn eol<I, S, E>(input: I) -> ParseResult<I, I, E>
+pub fn eol<I, E, S>(input: I) -> ParseResult<I, I, E>
 where
     I: Input,
     I::Token: AsChar,
@@ -103,16 +103,16 @@ where
     string("\n").or(string("\r\n")).parse(input)
 }
 
-pub fn anychar<I, S, E>(input: I) -> ParseResult<I::Token, I, E> 
+pub fn anychar<I, E, S>(input: I) -> ParseResult<I::Token, I, E> 
 where
     I: Input,
     I::Token: AsChar,
     E: ParseError<I, S>
 {
-    sat(|_| true).parse(input)
+    sat(|_| true)(input)
 }
 
-pub fn one_of<I, S, E, F>(tokens: F) -> impl Parser<I, Output = I::Token, Error = E> 
+pub fn one_of<I, E, S, F>(tokens: F) -> impl FnMut(I) -> ParseResult<I::Token, I, E>
 where
     I: Input,
     I::Token: AsChar,
@@ -122,7 +122,7 @@ where
     sat(move|t: &I::Token| tokens.find_token(t))
 }
 
-pub fn none_of<I, S, E, F>(tokens: F) -> impl Parser<I, Output = I::Token, Error = E> 
+pub fn none_of<I, E, S, F>(tokens: F) -> impl FnMut(I) -> ParseResult<I::Token, I, E>
 where
     I: Input,
     I::Token: AsChar,
@@ -136,116 +136,116 @@ pub mod ascii {
 
     use super::*;
 
-    pub fn digit<I, S, E>(input: I) -> ParseResult<I::Token, I, E>
+    pub fn digit<I, E, S>(input: I) -> ParseResult<I::Token, I, E>
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_ascii_digit()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_ascii_digit())(input)
     }
 
-    pub fn alpha<I, S, E>(input: I) -> ParseResult<I::Token, I, E>
+    pub fn alpha<I, E, S>(input: I) -> ParseResult<I::Token, I, E>
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_ascii_alphabetic()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_ascii_alphabetic())(input)
     }
 
-    pub fn lowercase<I, S, E>(input: I) -> ParseResult<I::Token, I, E> 
+    pub fn lowercase<I, E, S>(input: I) -> ParseResult<I::Token, I, E> 
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_ascii_lowercase()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_ascii_lowercase())(input)
     }
 
-    pub fn uppercase<I, S, E>(input: I) -> ParseResult<I::Token, I, E>   
+    pub fn uppercase<I, E, S>(input: I) -> ParseResult<I::Token, I, E>   
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_ascii_uppercase()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_ascii_uppercase())(input)
     }
 
-    pub fn alphanum<I, S, E>(input: I) -> ParseResult<I::Token, I, E>   
+    pub fn alphanum<I, E, S>(input: I) -> ParseResult<I::Token, I, E>   
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_ascii_alphanumeric()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_ascii_alphanumeric())(input)
     }
 
-    pub fn space<I, S, E>(input: I) -> ParseResult<I::Token, I, E>   
+    pub fn space<I, E, S>(input: I) -> ParseResult<I::Token, I, E>   
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_ascii_whitespace()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_ascii_whitespace())(input)
     }
 
-    pub fn hex<I, S, E>(input: I) -> ParseResult<I::Token, I, E> 
+    pub fn hex<I, E, S>(input: I) -> ParseResult<I::Token, I, E> 
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_ascii_hexdigit()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_ascii_hexdigit())(input)
     }
 }
 
 pub mod unicode {
     use super::*;
 
-    pub fn alphanum<I, S, E>(input: I) -> ParseResult<I::Token, I, E> 
+    pub fn alphanum<I, E, S>(input: I) -> ParseResult<I::Token, I, E> 
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_alphanumeric()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_alphanumeric())(input)
     }
 
 
-    pub fn alpha<I, S, E>(input: I) -> ParseResult<I::Token, I, E> 
+    pub fn alpha<I, E, S>(input: I) -> ParseResult<I::Token, I, E> 
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_alphabetic()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_alphabetic())(input)
     }
 
-    pub fn lowercase<I, S, E>(input: I) -> ParseResult<I::Token, I, E> 
+    pub fn lowercase<I, E, S>(input: I) -> ParseResult<I::Token, I, E> 
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_lowercase()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_lowercase())(input)
     }
 
-    pub fn uppercase<I, S, E>(input: I) -> ParseResult<I::Token, I, E> 
+    pub fn uppercase<I, E, S>(input: I) -> ParseResult<I::Token, I, E> 
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_uppercase()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_uppercase())(input)
     }
 
-    pub fn space<I, S, E>(input: I) -> ParseResult<I::Token, I, E> 
+    pub fn space<I, E, S>(input: I) -> ParseResult<I::Token, I, E> 
     where
         I: Input,
         I::Token: AsChar,
         E: ParseError<I, S>
     {
-        sat(|c: &I::Token| c.as_char().is_whitespace()).parse(input)
+        sat(|c: &I::Token| c.as_char().is_whitespace())(input)
     }
 }

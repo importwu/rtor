@@ -14,12 +14,12 @@ use crate::{
 
 
 
-#[test]
-fn test() {
-    let mut parser = opt(super::char::char('a'));
-    let result: ParseResult<Option<char>, &str> = parser.parse("abc");
-    let a =  Ok::<i32, i32>(2);
-}
+// #[test]
+// fn test() {
+//     let mut parser = opt(super::char::char('a'));
+//     let result: ParseResult<Option<char>, &str> = parser.parse("abc");
+//     let a =  Ok::<i32, i32>(2);
+// }
 
 
 /// Apply `parser`, if fails, returns [`None`] without cosuming input, otherwise 
@@ -37,10 +37,10 @@ fn test() {
 /// assert_eq!(parser("abc"), Ok((Some('a'), "bc")));
 /// assert_eq!(parser("bbc"), Ok((None, "bbc")))
 /// ```
-pub fn opt<I, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, P::Error>
+pub fn opt<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, E>
 where
     I: Input,
-    P: Parser<I>
+    P: Parser<I, E>
 {
     move |input: I| {
         match parser.parse(input.clone()) {
@@ -63,12 +63,12 @@ where
 /// 
 /// assert_eq!(parser("abc"), Ok(('b', "")))
 /// ```
-pub fn between<I, L, P, R>(mut left: L, mut parser: P, mut right: R) -> impl FnMut(I) -> ParseResult<P::Output, I, L::Error>
+pub fn between<I, E, L, P, R>(mut left: L, mut parser: P, mut right: R) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
 where
     I: Input,
-    L: Parser<I>,
-    P: Parser<I, Error = L::Error>,
-    R: Parser<I, Error = L::Error>
+    L: Parser<I, E>,
+    P: Parser<I, E>,
+    R: Parser<I, E>
 {
     move |input: I| {
         let (_, i) = left.parse(input)?;
@@ -79,12 +79,12 @@ where
 }
 
 
-pub fn pair<I, L, P, R>(mut left: L, mut parser: P, mut right: R) ->  impl FnMut(I) -> ParseResult<(L::Output, R::Output), I, L::Error>
+pub fn pair<I, E, L, P, R>(mut left: L, mut parser: P, mut right: R) ->  impl FnMut(I) -> ParseResult<(L::Output, R::Output), I, E>
 where 
     I: Input,
-    L: Parser<I>,
-    P: Parser<I, Error = L::Error>,
-    R: Parser<I, Error = L::Error>
+    L: Parser<I, E>,
+    P: Parser<I, E>,
+    R: Parser<I, E>
 {
     move |input: I| {
         let (o1, i) = left.parse(input)?;
@@ -94,10 +94,10 @@ where
     }
 }
 
-pub fn many<I, P>(mut parser: P) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn many<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
-    P: Parser<I>,
+    P: Parser<I, E>,
 {
     move |input: I| {
         let mut it = ParserIter::new(input, parser.ref_mut());
@@ -106,10 +106,10 @@ where
     }
 }
 
-pub fn many1<I, P>(mut parser: P) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn many1<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
-    P: Parser<I>
+    P: Parser<I, E>
 {
     move |input: I| {
         let (o, i) = parser.parse(input)?;
@@ -120,12 +120,12 @@ where
     }
 }
 
-pub fn many_till<I, S, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = Vec<A::Output>, Error = A::Error> 
+pub fn many_till<I, E, S, A, B>(mut parser: A, mut pred: B) -> impl FnMut(I) -> ParseResult<Vec<A::Output>, I, E>  
 where
     I: Input,
-    A: Parser<I>,
-    A::Error: ParseError<I, S>,
-    B: Parser<I, Error = A::Error>
+    E: ParseError<I, S>,
+    A: Parser<I, E>,
+    B: Parser<I, E>,
 {
     move |input: I| {
         let mut it = ParserIter::new(input, not(pred.ref_mut()).andr(parser.ref_mut()));
@@ -134,10 +134,10 @@ where
     }
 }
 
-pub fn count<I, P>(mut parser: P, n: usize) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn count<I, E, P>(mut parser: P, n: usize) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>  
 where 
     I: Input,
-    P: Parser<I>
+    P: Parser<I, E>
 {
     move |input: I| {
         let mut it = ParserIter::new(input, parser.ref_mut());
@@ -146,10 +146,10 @@ where
     }
 }
 
-pub fn skip_many<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error> 
+pub fn skip_many<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<(), I, E>  
 where 
     I: Input,
-    P: Parser<I>
+    P: Parser<I, E>
 {
     move |input: I| {
         let mut it = ParserIter::new(input, parser.ref_mut());
@@ -158,10 +158,10 @@ where
     }
 }
 
-pub fn skip_many1<I, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error> 
+pub fn skip_many1<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<(), I, E> 
 where 
     I: Input,
-    P: Parser<I>
+    P: Parser<I, E>
 {
     move |input: I| {
         let (_, i) = parser.parse(input)?;
@@ -171,12 +171,12 @@ where
     }
 }
 
-pub fn skip_till<I, S, A, B>(mut parser: A, mut pred: B) -> impl Parser<I, Output = (), Error = A::Error> 
+pub fn skip_till<I, E, S, A, B>(mut parser: A, mut pred: B) -> impl FnMut(I) -> ParseResult<(), I, E> 
 where
     I: Input,
-    A: Parser<I>,
-    A::Error: ParseError<I, S>,
-    B: Parser<I, Error = A::Error>
+    E: ParseError<I, S>,
+    A: Parser<I, E>,
+    B: Parser<I, E>
 {
     move |input: I| {
         let mut it = ParserIter::new(input, not(pred.ref_mut()).andr(parser.ref_mut()));
@@ -185,10 +185,10 @@ where
     }
 }
 
-pub fn skip<I, P>(mut parser: P, n: usize) -> impl Parser<I, Output = (), Error = P::Error> 
+pub fn skip<I, E, P>(mut parser: P, n: usize) -> impl FnMut(I) -> ParseResult<(), I, E> 
 where 
     I: Input,
-    P: Parser<I>
+    P: Parser<I, E>
 {
     move |input: I| {
         let mut it = ParserIter::new(input, parser.ref_mut());
@@ -197,11 +197,11 @@ where
     }
 }
 
-pub fn sep_by<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn sep_by<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
-    P: Parser<I>, 
-    S: Parser<I, Error = P::Error>
+    P: Parser<I, E>, 
+    S: Parser<I, E>
 {
     move |input: I| {
         let (mut os, i) = match parser.parse(input.clone()) {
@@ -214,11 +214,11 @@ where
     }
 }
 
-pub fn sep_by1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn sep_by1<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
-    P: Parser<I>, 
-    S: Parser<I, Error = P::Error>
+    P: Parser<I, E>, 
+    S: Parser<I, E>
 {
     move |input: I| {
         let (o, i) = parser.parse(input)?;
@@ -229,11 +229,11 @@ where
     }
 }
 
-pub fn end_by<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn end_by<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>
 where
     I: Input,
-    P: Parser<I>, 
-    S: Parser<I, Error = P::Error>
+    P: Parser<I, E>, 
+    S: Parser<I, E>
 {
     move |input: I| { 
         let (mut os, i) = match parser.ref_mut().andl(sep.ref_mut()).parse(input.clone()) {
@@ -246,11 +246,11 @@ where
     }
 }
 
-pub fn end_by1<I, P, S>(mut parser: P, mut sep: S) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn end_by1<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
-    P: Parser<I>, 
-    S: Parser<I, Error = P::Error>
+    P: Parser<I, E>, 
+    S: Parser<I, E>
 {
     move |input: I| { 
         let (o, i) = parser.ref_mut().andl(sep.ref_mut()).parse(input.clone())?;
@@ -261,10 +261,10 @@ where
     }
 }
 
-pub fn peek<I, P>(mut parser: P) -> impl Parser<I, Output = P::Output, Error = P::Error> 
+pub fn peek<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E> 
 where
     I: Input,
-    P: Parser<I>
+    P: Parser<I, E>
 {
     move |input: I| {
         match parser.parse(input.clone()) {
@@ -274,10 +274,10 @@ where
     }
 }
 
-pub fn recognize<I, P>(mut parser: P) -> impl Parser<I, Output = I, Error = P::Error> 
+pub fn recognize<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<I, I, E>
 where
     I: Input,
-    P: Parser<I>
+    P: Parser<I, E>
 {
     move |input: I| {
         let src = input.clone();
@@ -286,11 +286,11 @@ where
     }
 }
 
-pub fn not<I, S, P>(mut parser: P) -> impl Parser<I, Output = (), Error = P::Error>
+pub fn not<I, E, S, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<(), I, E>
 where
     I: Input,
-    P: Parser<I>,
-    P::Error: ParseError<I, S>
+    E: ParseError<I, S>,
+    P: Parser<I, E>,
 {
     move |mut input: I| {
         match parser.parse(input.clone()) {
@@ -300,11 +300,11 @@ where
     }
 }
 
-pub fn cond<I, C, P>(mut condition: C, mut parser: P) -> impl Parser<I, Output = Option<P::Output>, Error = P::Error> 
+pub fn cond<I, E, C, P>(mut condition: C, mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, E> 
 where
     I: Input,
-    C: Parser<I>,
-    P: Parser<I, Error = C::Error>
+    C: Parser<I, E>,
+    P: Parser<I, E>
 {
     move |input: I| {
         match condition.parse(input.clone()) {
@@ -317,7 +317,32 @@ where
     }
 }
 
-pub fn eof<I, S, E>(mut input: I) ->  ParseResult<(), I, E>
+pub fn preceded<I, E, A, B>(mut first: A, mut second: B) -> impl FnMut(I) -> ParseResult<B::Output, I, E> 
+where
+    I: Input,
+    A: Parser<I, E>,
+    B: Parser<I, E>
+{
+    move |input: I| {
+        let (_, i) = first.parse(input)?;
+        second.parse(i)
+    }
+}
+
+pub fn terminated<I, E, A, B>(mut first: A, mut second: B) -> impl FnMut(I) -> ParseResult<A::Output, I, E> 
+where
+    I: Input,
+    A: Parser<I, E>,
+    B: Parser<I, E>
+{
+    move |input: I| {
+        let (o, i) = first.parse(input)?;
+        let (_, i) = second.parse(i)?;
+        Ok((o, i))
+    }
+}
+
+pub fn eof<I, E, S>(mut input: I) ->  ParseResult<(), I, E>
 where
     I: Input,
     E: ParseError<I, S>
@@ -328,7 +353,7 @@ where
     }
 }
 
-pub fn error<I, S, E>(mut input: I) -> ParseResult<(), I, E> 
+pub fn error<I, E, S>(mut input: I) -> ParseResult<(), I, E> 
 where
     I: Input,
     E: ParseError<I, S>
@@ -336,11 +361,11 @@ where
     Err(ParseError::unexpect(input.peek(), input))
 }
 
-pub fn pure<I, S, E, T>(t: T) -> impl Parser<I, Output = T, Error = E> 
+pub fn pure<I, E, S, T>(t: T) -> impl FnMut(I) -> ParseResult<T, I, E> 
 where
     I: Input,
+    E: ParseError<I, S>,
     T: Clone,
-    E: ParseError<I, S>
 {
     move|input: I| Ok((t.clone(), input))
 }
@@ -365,10 +390,10 @@ fn map_range<R: RangeBounds<usize>>(range: R) -> (Option<usize>, Option<usize>) 
     }
 }
 
-pub fn manyr<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = Vec<P::Output>, Error = P::Error> 
+pub fn manyr<I, E, P, R>(mut parser: P, range: R) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>
 where
     I: Input,
-    P: Parser<I>,
+    P: Parser<I, E>,
     R: RangeBounds<usize>
 {
     let (start, end) = map_range(range);
@@ -426,10 +451,10 @@ where
     }
 }
 
-pub fn skipr<I, P, R>(mut parser: P, range: R) -> impl Parser<I, Output = (), Error = P::Error> 
+pub fn skipr<I, E, P, R>(mut parser: P, range: R) -> impl FnMut(I) -> ParseResult<(), I, E> 
 where
     I: Input,
-    P: Parser<I>,
+    P: Parser<I, E>,
     R: RangeBounds<usize>
 {
     let (start, end) = map_range(range);
@@ -481,21 +506,25 @@ where
     }
 }
 
-pub fn alt<I: Input, S, A: Alt<I, S>>(mut list: A) -> impl FnMut(I) -> ParseResult<A::Output, I, A::Error> {
+pub fn alt<I, E, S, A>(mut list: A) -> impl FnMut(I) -> ParseResult<A::Output, I, E> 
+where 
+    I: Input,
+    E: ParseError<I, S>,
+    A: Alt<I, E, S>
+{
     move |input: I| list.choice(input)
 }
 
 macro_rules! tuple_parser_impl {
     ($a: ident, $($rest: ident),+) => {
-        impl<Input, $a, $($rest),+> Parser<Input> for ($a, $($rest),+) 
+        impl<Input, Error, $a, $($rest),+> Parser<Input, Error> for ($a, $($rest),+) 
         where
-            $a: Parser<Input>,
-            $($rest: Parser<Input, Error = $a::Error>),+
+            $a: Parser<Input, Error>,
+            $($rest: Parser<Input, Error>),+
         {
             type Output = ($a::Output, $($rest::Output),+);
-            type Error = $a::Error;
 
-            fn parse(&mut self, input: Input) -> Result<(Self::Output, Input), Self::Error> {
+            fn parse(&mut self, input: Input) -> Result<(Self::Output, Input), Error> {
                 tuple_parser_inner!(o1, 0, self, input, (), $a, $($rest),+);
             }
         }
@@ -555,17 +584,16 @@ tuple_parser!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U);
 
 macro_rules! alt_parser_impl {
     ($a: ident, $($rest: ident),+) => {
-        impl<Input, Msg, $a, $($rest),+> Alt<Input, Msg> for ($a, $($rest),+) 
+        impl<Input, Error, Msg, $a, $($rest),+> Alt<Input, Error, Msg> for ($a, $($rest),+) 
         where
             Input: super::Input,
-            $a: Parser<Input>,
-            $a::Error: ParseError<Input, Msg>,
-            $($rest: Parser<Input, Error = $a::Error, Output = $a::Output>),+
+            $a: Parser<Input, Error>,
+            Error: ParseError<Input, Msg>,
+            $($rest: Parser<Input, Error, Output = $a::Output>),+
         {   
             type Output = $a::Output;
-            type Error = $a::Error;
 
-            fn choice(&mut self, input: Input) -> Result<(Self::Output, Input), Self::Error> {
+            fn choice(&mut self, input: Input) -> Result<(Self::Output, Input), Error> {
                 alt_parser_inner!(0, (), self, input, $a, $($rest),+)
             }
         }

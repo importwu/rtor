@@ -4,13 +4,13 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct ParserIter<I, P, E> {
+pub struct ParserIter<I, E, P> {
     input: I,
     parser: P,
     error: Option<E>,
 }
 
-impl<I, P, E> ParserIter<I, P, E> {
+impl<I, E, P> ParserIter<I, E, P> {
     pub fn new(input: I, parser: P) -> Self {
         Self { 
             input, 
@@ -31,10 +31,10 @@ impl<I, P, E> ParserIter<I, P, E> {
     }
 }
 
-impl<I, P> Iterator for &mut ParserIter<I, P, P::Error> 
+impl<I, E, P> Iterator for &mut ParserIter<I, E, P> 
 where
     I: Input,
-    P: Parser<I>
+    P: Parser<I, E>
 {
     type Item = P::Output;
 

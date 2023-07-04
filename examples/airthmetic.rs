@@ -46,11 +46,11 @@ fn expr(input: &str) -> ParseResult<Expr, &str> {
 
     symbol(atom)
         .chainl1(|i| {
-            let (op, i) = symbol(alt((char('*'), char('/')))).parse(i)?;
+            let (op, i) = symbol(alt((char('*'), char('/'))))(i)?;
             Ok((move |l: Expr, r: Expr| Expr::Binary { op, left: Box::new(l), right: Box::new(r) }, i))
         })
         .chainl1(|i| {
-            let (op, i) = symbol(alt((char('+'), char('-')))).parse(i)?;
+            let (op, i) = symbol(alt((char('+'), char('-'))))(i)?;
             Ok((move |l: Expr, r: Expr| Expr::Binary { op, left: Box::new(l), right: Box::new(r) }, i))
         })
         .parse(input)

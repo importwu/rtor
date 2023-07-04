@@ -74,9 +74,12 @@ impl<'a,  T: PartialEq> FindToken<T> for &'a [T] {
     }
 }
 
-pub trait Alt<I: Input, S> {
+pub trait Alt<I, E, S> 
+where
+    I: Input,
+    E: ParseError<I, S>
+{
     type Output;
-    type Error: ParseError<I, S>;
     
-    fn choice(&mut self, input: I) -> Result<(Self::Output, I), Self::Error>;
+    fn choice(&mut self, input: I) -> Result<(Self::Output, I), E>;
 }
