@@ -28,8 +28,8 @@ pub trait Parser<I, E> {
         MapErr { parser: self, f, marker: PhantomData }
     }
 
-    fn or<P, S>(self, second: P) -> Or<S, Self, P> where Self: Sized {
-        Or { first: self, second, marker: PhantomData }
+    fn or<P>(self, second: P) -> Or<Self, P> where Self: Sized {
+        Or { first: self, second }
     }
 
     fn andl<P>(self, second: P) -> Andl<Self, P> where Self: Sized {
@@ -76,8 +76,8 @@ pub trait Parser<I, E> {
         RefMut { parser: self }
     }
 
-    fn expect<S>(self, message: S) -> Expect<E, S, Self> where Self: Sized {
-        Expect { parser: self, message, marker: PhantomData }
+    fn expect(self, message: &str) -> Expect<E, Self> where Self: Sized {
+        Expect { parser: self, message: message.to_owned(), marker: PhantomData }
     }
 
 }
@@ -132,18 +132,17 @@ where
 }
 
 #[derive(Clone)]
-pub struct Or<S, A, B> {
+pub struct Or<A, B> {
     first: A,
     second: B,
-    marker: PhantomData<S>
 }
 
-impl<I, E, S, A, B> Parser<I, E> for Or<S, A, B> 
+impl<I, E, A, B> Parser<I, E> for Or<A, B> 
 where
     I: Input, 
     A: Parser<I, E>,
     B: Parser<I, E, Output = A::Output>,
-    E: ParseError<I, S>
+    E: ParseError<I>
 {
     type Output = A::Output;
 
@@ -270,18 +269,17 @@ where
 }
 
 #[derive(Clone)]
-pub struct Expect<E, S, P> {
+pub struct Expect<E, P> {
     parser: P,
-    message: S,
+    message: String,
     marker: PhantomData<E>
 }
 
-impl<I, E, S, P> Parser<I, E> for Expect<E, S, P> 
+impl<I, E, P> Parser<I, E> for Expect<E, P> 
 where
     I: Input,
-    E: ParseError<I, S>,
+    E: ParseError<I>,
     P: Parser<I, E>,
-    S: Clone
 {
     type Output = P::Output;
 

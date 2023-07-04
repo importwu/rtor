@@ -9,7 +9,7 @@ mod input;
 pub use self::{
     error::{
         SimpleError,
-        MultiError,
+        // MultiError,
         ParseError
     },
     parser::Parser,
@@ -21,7 +21,7 @@ pub use self::{
     iter::ParserIter
 };
 
-pub type ParseResult<O, I, E = SimpleError<I, String>> = Result<(O, I), E>;
+pub type ParseResult<O, I, E = SimpleError<<I as Input>::Token>> = Result<(O, I), E>;
 
 pub trait AsChar {
     fn as_char(&self) -> char;
@@ -74,10 +74,10 @@ impl<'a,  T: PartialEq> FindToken<T> for &'a [T] {
     }
 }
 
-pub trait Alt<I, E, S> 
+pub trait Alt<I, E> 
 where
     I: Input,
-    E: ParseError<I, S>
+    E: ParseError<I>
 {
     type Output;
     

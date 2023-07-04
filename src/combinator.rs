@@ -14,12 +14,13 @@ use crate::{
 
 
 
-// #[test]
-// fn test() {
-//     let mut parser = opt(super::char::char('a'));
-//     let result: ParseResult<Option<char>, &str> = parser.parse("abc");
-//     let a =  Ok::<i32, i32>(2);
-// }
+#[test]
+fn test() {
+    let mut parser = many_till(super::char::char('a'), super::char::char('b'));
+    let result: ParseResult<Vec<char>, &str> = parser.parse("aab");
+
+    println!("{:?}", result)
+}
 
 
 /// Apply `parser`, if fails, returns [`None`] without cosuming input, otherwise 
@@ -35,7 +36,7 @@ use crate::{
 /// }
 /// 
 /// assert_eq!(parser("abc"), Ok((Some('a'), "bc")));
-/// assert_eq!(parser("bbc"), Ok((None, "bbc")))
+/// assert_eq!(parser("bbc"), Ok((None, "bbc")));
 /// ```
 pub fn opt<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, E>
 where
@@ -50,7 +51,7 @@ where
     }
 }
 
-/// Apply `parser` between `left` parser and `right` parser, the value returned by `parser`.
+/// Apply `parser` between parser `left` and parser `right`, the value returned by `parser`.
 /// # Example
 /// ```
 /// use rtor::{ParseResult, Parser};
@@ -58,10 +59,10 @@ where
 /// use rtor::combinator::between;
 /// 
 /// fn parser(i: &str) -> ParseResult<char, &str> {
-///     between(char('a'), char('b'), char('c'))(i)
+///     between(char('('), char('a'), char(')'))(i)
 /// }
 /// 
-/// assert_eq!(parser("abc"), Ok(('b', "")))
+/// assert_eq!(parser("(a)"), Ok(('a', "")));
 /// ```
 pub fn between<I, E, L, P, R>(mut left: L, mut parser: P, mut right: R) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
 where
@@ -78,7 +79,19 @@ where
     }
 }
 
-
+/// Returns value by parser `left` and parser `right` in tuple.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser};
+/// use rtor::char::char;
+/// use rtor::combinator::pair;
+/// 
+/// fn parser(i: &str) -> ParseResult<(char, char), &str> {
+///     pair(char('a'), char(':'), char('b'))(i)
+/// }
+/// 
+/// assert_eq!(parser("a:b"), Ok((('a', 'b'), "")));
+/// ```
 pub fn pair<I, E, L, P, R>(mut left: L, mut parser: P, mut right: R) ->  impl FnMut(I) -> ParseResult<(L::Output, R::Output), I, E>
 where 
     I: Input,
@@ -94,6 +107,20 @@ where
     }
 }
 
+/// Apply `parser` zero or more times, the results in a [`Vec`].
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser};
+/// use rtor::char::char;
+/// use rtor::combinator::many;
+/// 
+/// fn parser(i: &str) -> ParseResult<Vec<char>, &str> {
+///     many(char('a'))(i)
+/// }
+/// 
+/// assert_eq!(parser("aaab"), Ok((vec!['a', 'a', 'a'], "b")));
+/// assert_eq!(parser("b"), Ok((vec![], "b")));
+/// ```
 pub fn many<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
@@ -101,11 +128,25 @@ where
 {
     move |input: I| {
         let mut it = ParserIter::new(input, parser.ref_mut());
-        let os = it.collect();
-        Ok((os, it.get()))
+        let result = it.collect();
+        Ok((result, it.get()))
     }
 }
 
+/// Apply `parser` one or more times, the results in a [`Vec`].
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::many1;
+/// 
+/// fn parser(i: &str) -> ParseResult<Vec<char>, &str> {
+///     many1(char('a'))(i)
+/// }
+/// 
+/// assert_eq!(parser("aaab"), Ok((vec!['a', 'a', 'a'], "b")));
+/// assert_eq!(parser("b"), Err(SimpleError::Unexpected(Some('b'))));
+/// ```
 pub fn many1<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
@@ -113,27 +154,64 @@ where
 {
     move |input: I| {
         let (o, i) = parser.parse(input)?;
-        let mut os = vec![o];
+        let mut result = vec![o];
         let mut it = ParserIter::new(i, parser.ref_mut());
-        it.for_each(|o| os.push(o));
-        Ok((os, it.get()))
+        it.for_each(|o| result.push(o));
+        Ok((result, it.get()))
     }
 }
 
-pub fn many_till<I, E, S, A, B>(mut parser: A, mut pred: B) -> impl FnMut(I) -> ParseResult<Vec<A::Output>, I, E>  
+/// Apply `parser` zero or more times until parser `pred` succeed, the results in a [`Vec`].
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::many_till;
+/// 
+/// fn parser(i: &str) -> ParseResult<Vec<char>, &str> {
+///     many_till(char('a'), char('b'))(i)
+/// }
+/// 
+/// assert_eq!(parser("aaab"), Ok((vec!['a', 'a', 'a'], "b")));
+/// assert_eq!(parser("b"), Ok((vec![], "b")));
+/// assert_eq!(parser("acb"), Err(SimpleError::Unexpected(Some('c'))));
+/// assert_eq!(parser("aa"), Err(SimpleError::Unexpected(None)));
+/// ```
+pub fn many_till<I, E, A, B>(mut parser: A, mut pred: B) -> impl FnMut(I) -> ParseResult<Vec<A::Output>, I, E>  
 where
     I: Input,
-    E: ParseError<I, S>,
+    E: ParseError<I>,
     A: Parser<I, E>,
     B: Parser<I, E>,
 {
-    move |input: I| {
-        let mut it = ParserIter::new(input, not(pred.ref_mut()).andr(parser.ref_mut()));
-        let os = it.collect();
-        Ok((os, it.get()))
+    move |mut input: I| {
+        let mut result = vec![];
+
+        while let Err(_) = pred.parse(input.clone()) {
+            let (o, i) = parser.parse(input)?;
+            result.push(o);
+            input = i;
+        }
+
+        Ok((result, input))
     }
 }
 
+/// Apply `parser` specify `n` times, the results in a [`Vec`].
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::count;
+/// 
+/// fn parser(i: &str) -> ParseResult<Vec<char>, &str> {
+///     count(char('a'), 3)(i)
+/// }
+/// 
+/// assert_eq!(parser("aaa"), Ok((vec!['a', 'a', 'a'], "")));
+/// assert_eq!(parser("aaaa"), Ok((vec!['a', 'a', 'a'], "a")));
+/// assert_eq!(parser("aa"), Err(SimpleError::Unexpected(None)));
+/// ```
 pub fn count<I, E, P>(mut parser: P, n: usize) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>  
 where 
     I: Input,
@@ -141,11 +219,25 @@ where
 {
     move |input: I| {
         let mut it = ParserIter::new(input, parser.ref_mut());
-        let os = it.take(n).collect();
-        Ok((os, it.try_get()?))
+        let result = it.take(n).collect();
+        Ok((result, it.try_get()?))
     }
 }
 
+/// Apply `parser` zero or more times, discard results.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser};
+/// use rtor::char::char;
+/// use rtor::combinator::skip_many;
+/// 
+/// fn parser(i: &str) -> ParseResult<(), &str> {
+///     skip_many(char('a'))(i)
+/// }
+/// 
+/// assert_eq!(parser("aaab"), Ok(((), "b")));
+/// assert_eq!(parser("b"), Ok(((), "b")));
+/// ```
 pub fn skip_many<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<(), I, E>  
 where 
     I: Input,
@@ -158,6 +250,20 @@ where
     }
 }
 
+/// Apply `parser` one or more times, discard results.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::skip_many1;
+/// 
+/// fn parser(i: &str) -> ParseResult<(), &str> {
+///     skip_many1(char('a'))(i)
+/// }
+/// 
+/// assert_eq!(parser("aaab"), Ok(((), "b")));
+/// assert_eq!(parser("b"), Err(SimpleError::Unexpected(Some('b'))));
+/// ```
 pub fn skip_many1<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<(), I, E> 
 where 
     I: Input,
@@ -171,20 +277,54 @@ where
     }
 }
 
-pub fn skip_till<I, E, S, A, B>(mut parser: A, mut pred: B) -> impl FnMut(I) -> ParseResult<(), I, E> 
+/// Apply `parser` zero or more times until parser `pred` succeed, discard results.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::skip_till;
+/// 
+/// fn parser(i: &str) -> ParseResult<(), &str> {
+///     skip_till(char('a'), char('b'))(i)
+/// }
+/// 
+/// assert_eq!(parser("aaab"), Ok(((), "b")));
+/// assert_eq!(parser("b"), Ok(((), "b")));
+/// assert_eq!(parser("acb"), Err(SimpleError::Unexpected(Some('c'))));
+/// assert_eq!(parser("aa"), Err(SimpleError::Unexpected(None)));
+/// ```
+pub fn skip_till<I, E, A, B>(mut parser: A, mut pred: B) -> impl FnMut(I) -> ParseResult<(), I, E> 
 where
     I: Input,
-    E: ParseError<I, S>,
+    E: ParseError<I>,
     A: Parser<I, E>,
     B: Parser<I, E>
 {
-    move |input: I| {
-        let mut it = ParserIter::new(input, not(pred.ref_mut()).andr(parser.ref_mut()));
-        it.for_each(|_| ());
-        Ok(((), it.get()))
+    move |mut input: I| {
+        while let Err(_) = pred.parse(input.clone()) {
+            let (_, i) = parser.parse(input)?;
+            input = i;
+        }
+
+        Ok(((), input))
     }
 }
 
+/// Apply `parser` specify `n` times, discard results.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::skip;
+/// 
+/// fn parser(i: &str) -> ParseResult<(), &str> {
+///     skip(char('a'), 3)(i)
+/// }
+/// 
+/// assert_eq!(parser("aaa"), Ok(((), "")));
+/// assert_eq!(parser("aaaa"), Ok(((), "a")));
+/// assert_eq!(parser("aa"), Err(SimpleError::Unexpected(None)));
+/// ```
 pub fn skip<I, E, P>(mut parser: P, n: usize) -> impl FnMut(I) -> ParseResult<(), I, E> 
 where 
     I: Input,
@@ -197,6 +337,22 @@ where
     }
 }
 
+
+/// Apply `parser` zero or more times, separated by parser `sep`, the results in a [`Vec`].
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser};
+/// use rtor::char::char;
+/// use rtor::combinator::sep_by;
+/// 
+/// fn parser(i: &str) -> ParseResult<Vec<char>, &str> {
+///     sep_by(char('a'), char(','))(i)
+/// }
+/// 
+/// assert_eq!(parser("a,a,a"), Ok((vec!['a', 'a', 'a'], "")));
+/// assert_eq!(parser("a"), Ok((vec!['a'], "")));
+/// assert_eq!(parser("b"), Ok((vec![], "b")));
+/// ```
 pub fn sep_by<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
@@ -214,6 +370,21 @@ where
     }
 }
 
+/// Apply `parser` one or more times, separated by parser `sep`, the results in a [`Vec`].
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::sep_by1;
+/// 
+/// fn parser(i: &str) -> ParseResult<Vec<char>, &str> {
+///     sep_by1(char('a'), char(','))(i)
+/// }
+/// 
+/// assert_eq!(parser("a,a,a"), Ok((vec!['a', 'a', 'a'], "")));
+/// assert_eq!(parser("a"), Ok((vec!['a'], "")));
+/// assert_eq!(parser("b"), Err(SimpleError::Unexpected(Some('b'))));
+/// ```
 pub fn sep_by1<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
@@ -229,6 +400,21 @@ where
     }
 }
 
+/// Apply `parser` zero or more times, separated end by parser `sep`, the results in a [`Vec`].
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser};
+/// use rtor::char::char;
+/// use rtor::combinator::end_by;
+/// 
+/// fn parser(i: &str) -> ParseResult<Vec<char>, &str> {
+///     end_by(char('a'), char(';'))(i)
+/// }
+/// 
+/// assert_eq!(parser("a;a;a;"), Ok((vec!['a', 'a', 'a'], "")));
+/// assert_eq!(parser("a;"), Ok((vec!['a'], "")));
+/// assert_eq!(parser("b"), Ok((vec![], "b")));
+/// ```
 pub fn end_by<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>
 where
     I: Input,
@@ -246,6 +432,22 @@ where
     }
 }
 
+/// Apply `parser` one or more times, separated end by parser `sep`, the results in a [`Vec`].
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::end_by1;
+/// 
+/// fn parser(i: &str) -> ParseResult<Vec<char>, &str> {
+///     end_by1(char('a'), char(';'))(i)
+/// }
+/// 
+/// assert_eq!(parser("a;a;a;"), Ok((vec!['a', 'a', 'a'], "")));
+/// assert_eq!(parser("a;"), Ok((vec!['a'], "")));
+/// assert_eq!(parser("a"), Err(SimpleError::Unexpected(None)));
+/// assert_eq!(parser("b"), Err(SimpleError::Unexpected(Some('b'))));
+/// ```
 pub fn end_by1<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
@@ -261,6 +463,21 @@ where
     }
 }
 
+
+/// Apply `parser` without cosuming input, the value returned by `parser`.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::peek;
+/// 
+/// fn parser(i: &str) -> ParseResult<char, &str> {
+///     peek(char('a'))(i)
+/// }
+/// 
+/// assert_eq!(parser("abc"), Ok(('a', "abc")));
+/// assert_eq!(parser("cbc"), Err(SimpleError::Unexpected(Some('c'))));
+/// ```
 pub fn peek<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E> 
 where
     I: Input,
@@ -274,6 +491,19 @@ where
     }
 }
 
+/// Apply `parser`, if succeed, return consumed input.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser};
+/// use rtor::char::char;
+/// use rtor::combinator::{recognize, many};
+/// 
+/// fn parser(i: &str) -> ParseResult<&str, &str> {
+///     recognize(many(char('a')))(i)
+/// }
+/// 
+/// assert_eq!(parser("aaab"), Ok(("aaa", "b")));
+/// ```
 pub fn recognize<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<I, I, E>
 where
     I: Input,
@@ -286,10 +516,24 @@ where
     }
 }
 
-pub fn not<I, E, S, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<(), I, E>
+/// Succeeds if `parser` failed.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::not;
+/// 
+/// fn parser(i: &str) -> ParseResult<(), &str> {
+///     not(char('a'))(i)
+/// }
+/// 
+/// assert_eq!(parser("ba"), Ok(((), "ba")));
+/// assert_eq!(parser("ab"), Err(SimpleError::Unexpected(Some('a'))));
+/// ```
+pub fn not<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<(), I, E>
 where
     I: Input,
-    E: ParseError<I, S>,
+    E: ParseError<I>,
     P: Parser<I, E>,
 {
     move |mut input: I| {
@@ -300,14 +544,29 @@ where
     }
 }
 
-pub fn cond<I, E, C, P>(mut condition: C, mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, E> 
+/// Apply parser `cond`, if fails, returns [`None`] without consuming `input`, otherwise apply `parser`, the value returned by `parser`.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::cond;
+/// 
+/// fn parser(i: &str) -> ParseResult<Option<char>, &str> {
+///     cond(char('a'), char('b'))(i)
+/// }
+/// 
+/// assert_eq!(parser("abc"), Ok((Some('b'), "c")));
+/// assert_eq!(parser("cbc"), Ok((None, "cbc")));
+/// assert_eq!(parser("acb"), Err(SimpleError::Unexpected(Some('c'))));
+/// ```
+pub fn cond<I, E, C, P>(mut cond: C, mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, E> 
 where
     I: Input,
     C: Parser<I, E>,
     P: Parser<I, E>
 {
     move |input: I| {
-        match condition.parse(input.clone()) {
+        match cond.parse(input.clone()) {
             Ok((_, i)) => match parser.parse(i) {
                 Ok((o, i)) => Ok((Some(o), i)),
                 Err(e) => Err(e)
@@ -342,10 +601,10 @@ where
     }
 }
 
-pub fn eof<I, E, S>(mut input: I) ->  ParseResult<(), I, E>
+pub fn eof<I, E>(mut input: I) ->  ParseResult<(), I, E>
 where
     I: Input,
-    E: ParseError<I, S>
+    E: ParseError<I>
 {
     match input.peek() {
         None => Ok(((), input)),
@@ -353,18 +612,18 @@ where
     }
 }
 
-pub fn error<I, E, S>(mut input: I) -> ParseResult<(), I, E> 
+pub fn error<I, E>(mut input: I) -> ParseResult<(), I, E> 
 where
     I: Input,
-    E: ParseError<I, S>
+    E: ParseError<I>
 {
     Err(ParseError::unexpect(input.peek(), input))
 }
 
-pub fn pure<I, E, S, T>(t: T) -> impl FnMut(I) -> ParseResult<T, I, E> 
+pub fn pure<I, E, T>(t: T) -> impl FnMut(I) -> ParseResult<T, I, E> 
 where
     I: Input,
-    E: ParseError<I, S>,
+    E: ParseError<I>,
     T: Clone,
 {
     move|input: I| Ok((t.clone(), input))
@@ -506,11 +765,11 @@ where
     }
 }
 
-pub fn alt<I, E, S, A>(mut list: A) -> impl FnMut(I) -> ParseResult<A::Output, I, E> 
+pub fn alt<I, E, A>(mut list: A) -> impl FnMut(I) -> ParseResult<A::Output, I, E> 
 where 
     I: Input,
-    E: ParseError<I, S>,
-    A: Alt<I, E, S>
+    E: ParseError<I>,
+    A: Alt<I, E>
 {
     move |input: I| list.choice(input)
 }
@@ -584,11 +843,11 @@ tuple_parser!(A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U);
 
 macro_rules! alt_parser_impl {
     ($a: ident, $($rest: ident),+) => {
-        impl<Input, Error, Msg, $a, $($rest),+> Alt<Input, Error, Msg> for ($a, $($rest),+) 
+        impl<Input, Error, $a, $($rest),+> Alt<Input, Error> for ($a, $($rest),+) 
         where
             Input: super::Input,
             $a: Parser<Input, Error>,
-            Error: ParseError<Input, Msg>,
+            Error: ParseError<Input>,
             $($rest: Parser<Input, Error, Output = $a::Output>),+
         {   
             type Output = $a::Output;

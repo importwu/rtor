@@ -11,23 +11,24 @@ use crate::{
     AsChar
 };
 
-pub trait ParseError<I: Input, S> {
+pub trait ParseError<I: Input> {
     fn unexpect(token: Option<I::Token>, input: I) -> Self;
-    fn expect(message: S, input: I) -> Self;
+    fn expect(message: String, input: I) -> Self;
     fn merge(self, other: Self) -> Self;
 }
 
-pub enum SimpleError<I: Input, S> {
-    Unexpected(Option<I::Token>),
-    Expected(S)
+#[derive(Debug, PartialEq)]
+pub enum SimpleError<T> {
+    Unexpected(Option<T>),
+    Expected(String)
 }
 
-impl<I: Input, S> ParseError<I, S> for SimpleError<I, S> {
+impl<I: Input> ParseError<I> for SimpleError<I::Token> {
     fn unexpect(token: Option<I::Token>, _: I) -> Self {
         Self::Unexpected(token)
     }
 
-    fn expect(message: S, _: I) -> Self {
+    fn expect(message: String, _: I) -> Self {
         Self::Expected(message)
     }
 
@@ -36,45 +37,9 @@ impl<I: Input, S> ParseError<I, S> for SimpleError<I, S> {
     }
 }
 
-impl<I, S> PartialEq for SimpleError<I, S> 
+impl<T> fmt::Display for SimpleError<T> 
 where
-    I: Input,
-    I::Token: PartialEq,
-    S: PartialEq
-{
-    fn eq(&self, other: &Self) -> bool {
-        match self {
-            Self::Unexpected(t1) => match other {
-                Self::Unexpected(t2) => t1 == t2,
-                _ => false
-            }
-            Self::Expected(msg1) => match other {
-                Self::Expected(msg2) => msg1 == msg2,
-                _ => false
-            }
-        }
-    }
-}
-
-impl<I, S> fmt::Debug for SimpleError<I, S> 
-where 
-    I: Input,
-    I::Token: fmt::Debug,
-    S: fmt::Debug
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Unexpected(t) => f.debug_tuple("Unexpected").field(&t).finish(),
-            Self::Expected(msg) => f.debug_tuple("Expected").field(&msg).finish()
-        }
-    }
-}
-
-impl<I, S> fmt::Display for SimpleError<I, S> 
-where
-    I: Input,
-    I::Token: fmt::Display,
-    S: fmt::Display
+    T: fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -85,24 +50,15 @@ where
     }
 }
 
-impl<I, S> error::Error for SimpleError<I, S> 
-where 
-    I: Input + fmt::Display + fmt::Debug,
-    I::Token: fmt::Display + fmt::Debug, 
-    S: fmt::Debug + fmt::Display 
-    {}
+impl<T> error::Error for SimpleError<T> where T: fmt::Display + fmt::Debug {}
 
-
-pub struct MultiError<I, S> 
-where
-    I: Input,
-    I::Token: AsChar 
-{
+#[derive(Debug, PartialEq)]
+pub struct MultiError<T> {
     pub pos: Pos,
-    pub errors: Vec<SimpleError<I, S>>
+    pub errors: Vec<SimpleError<T>>
 }
 
-impl<I, S> ParseError<State<I>, S> for MultiError<I, S> 
+impl<I> ParseError<State<I>> for MultiError<I::Token> 
 where 
     I: Input,
     I::Token: AsChar
@@ -114,7 +70,7 @@ where
         }
     }
     
-    fn expect(message: S, input: State<I>) -> Self {
+    fn expect(message: String, input: State<I>) -> Self {
         Self { 
             pos: input.pos(), 
             errors: vec![SimpleError::Expected(message)] 
@@ -141,36 +97,9 @@ where
     }
 }
 
-impl<I, S> PartialEq for MultiError<I, S> 
+impl<T> fmt::Display for MultiError<T> 
 where
-    I: Input,
-    I::Token: AsChar + PartialEq,
-    S: PartialEq
-{
-    fn eq(&self, other: &Self) -> bool {
-        self.pos == other.pos && self.errors == other.errors
-    }
-}
-
-impl<I, S> fmt::Debug for MultiError<I, S> 
-where
-    I: Input,
-    I::Token: AsChar + fmt::Debug,
-    S: fmt::Debug
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("MultiError")
-            .field("pos", &self.pos)
-            .field("errors", &self.errors)
-            .finish()
-    }
-}
-
-impl<I, S> fmt::Display for MultiError<I, S> 
-where
-    I: Input,
-    I::Token: AsChar + fmt::Debug + fmt::Display,
-    S: fmt::Display
+    T: AsChar + fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "parse error at line:{}, column:{}", self.pos.line(), self.pos.column())?;
@@ -181,9 +110,4 @@ where
     }
 }
 
-impl<I, S> error::Error for MultiError<I, S> 
-where 
-    I: Input + fmt::Display + fmt::Debug,
-    I::Token: AsChar + fmt::Display + fmt::Debug, 
-    S: fmt::Display + fmt::Debug 
-    {}
+impl<T> error::Error for MultiError<T> where T: AsChar + fmt::Display + fmt::Debug {}

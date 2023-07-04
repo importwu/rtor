@@ -26,6 +26,7 @@ use rtor::{
         not,
         alt,
         eof,
+        terminated
     }, 
 };
 
@@ -51,7 +52,7 @@ fn main() {
     }
     "#;
     
-    let json_value = symbol(json_value).andl(symbol(eof)).parse(s);
+    let json_value = terminated(symbol(json_value), symbol(eof)).parse(s);
     println!("{:#?}", json_value);
 }
 
@@ -79,7 +80,7 @@ fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
-    let escape = (alt((one_of("\"\\/bfnrt"), char('u'))), skip(hex, 4));
+    let escape = alt((one_of("\"\\/bfnrt"), char('u').andl(skip(hex, 4))));
     let character = alt((char('\\').andl(escape), not(char('"')).andr(anychar)));
     between(
         char('"'), 
