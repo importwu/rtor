@@ -576,6 +576,19 @@ where
     }
 }
 
+/// Apply parser `first` then apply parser `second`, the value returned by parser `second`.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser};
+/// use rtor::char::char;
+/// use rtor::combinator::preceded;
+/// 
+/// fn parser(i: &str) -> ParseResult<char, &str> {
+///     preceded(char('a'), char('b'))(i)
+/// }
+/// 
+/// assert_eq!(parser("abc"), Ok(('b', "c")));
+/// ```
 pub fn preceded<I, E, A, B>(mut first: A, mut second: B) -> impl FnMut(I) -> ParseResult<B::Output, I, E> 
 where
     I: Input,
@@ -588,6 +601,19 @@ where
     }
 }
 
+/// Apply parser `first` then apply parser `second`, the value returned by parser `first`.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser};
+/// use rtor::char::char;
+/// use rtor::combinator::terminated;
+/// 
+/// fn parser(i: &str) -> ParseResult<char, &str> {
+///     terminated(char('a'), char('b'))(i)
+/// }
+/// 
+/// assert_eq!(parser("abc"), Ok(('a', "c")));
+/// ```
 pub fn terminated<I, E, A, B>(mut first: A, mut second: B) -> impl FnMut(I) -> ParseResult<A::Output, I, E> 
 where
     I: Input,
@@ -601,6 +627,20 @@ where
     }
 }
 
+/// Succeed if at the end of `input`.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::eof;
+/// 
+/// fn parser(i: &str) -> ParseResult<(), &str> {
+///     eof(i)
+/// }
+/// 
+/// assert_eq!(parser(""), Ok(((), "")));
+/// assert_eq!(parser("abc"), Err(SimpleError::Unexpected(Some('a'))));
+/// ```
 pub fn eof<I, E>(mut input: I) ->  ParseResult<(), I, E>
 where
     I: Input,
@@ -612,6 +652,19 @@ where
     }
 }
 
+/// Always fail.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::error;
+/// 
+/// fn parser(i: &str) -> ParseResult<(), &str> {
+///     error(i)
+/// }
+/// 
+/// assert_eq!(parser("abc"), Err(SimpleError::Unexpected(Some('a'))));
+/// ```
 pub fn error<I, E>(mut input: I) -> ParseResult<(), I, E> 
 where
     I: Input,
@@ -620,7 +673,21 @@ where
     Err(ParseError::unexpect(input.peek(), input))
 }
 
-pub fn pure<I, E, T>(t: T) -> impl FnMut(I) -> ParseResult<T, I, E> 
+/// Always succeed without consuming `input`.
+/// # Example
+/// ```
+/// use rtor::{ParseResult, Parser, SimpleError};
+/// use rtor::char::char;
+/// use rtor::combinator::pure;
+/// 
+/// fn parser(i: &str) -> ParseResult<(), &str> {
+///     pure('1')(i)
+/// }
+/// 
+/// assert_eq!(parser("abc"), Ok(('1', "abc")));
+/// assert_eq!(parser(""), Ok(('1', "")));
+/// ```
+pub fn pure<T, I, E>(t: T) -> impl FnMut(I) -> ParseResult<T, I, E> 
 where
     I: Input,
     E: ParseError<I>,
@@ -765,11 +832,11 @@ where
     }
 }
 
-pub fn alt<I, E, A>(mut list: A) -> impl FnMut(I) -> ParseResult<A::Output, I, E> 
+pub fn alt<I, E, A>(mut list: List) -> impl FnMut(I) -> ParseResult<A::Output, I, E> 
 where 
     I: Input,
     E: ParseError<I>,
-    A: Alt<I, E>
+    List: Alt<I, E>
 {
     move |input: I| list.choice(input)
 }
