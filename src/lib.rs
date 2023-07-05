@@ -9,7 +9,7 @@ mod input;
 pub use self::{
     error::{
         SimpleError,
-        // MultiError,
+        MultiError,
         ParseError
     },
     parser::Parser,
@@ -18,7 +18,10 @@ pub use self::{
         Pos,
         State
     },
-    iter::ParserIter
+    iter::{
+        ParserIter, 
+        iterator
+    }
 };
 
 pub type ParseResult<O, I, E = SimpleError<<I as Input>::Token>> = Result<(O, I), E>;

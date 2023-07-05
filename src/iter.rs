@@ -53,3 +53,7 @@ where
         }
     }
 }
+
+pub fn iterator<I, E, P>(input: I, parser: P) -> ParserIter<I, E, P> {
+    ParserIter::new(input, parser)
+}

@@ -8,7 +8,7 @@ use crate::{
     Parser, 
     ParseError, 
     ParseResult,
-    ParserIter, 
+    iterator, 
     Alt
 };
 
@@ -19,7 +19,7 @@ fn test() {
     let mut parser = many_till(super::char::char('a'), super::char::char('b'));
     let result: ParseResult<Vec<char>, &str> = parser.parse("aab");
 
-    println!("{:?}", result)
+    println!("{:?}", result);
 }
 
 
@@ -127,7 +127,7 @@ where
     P: Parser<I, E>,
 {
     move |input: I| {
-        let mut it = ParserIter::new(input, parser.ref_mut());
+        let mut it = iterator(input, parser.ref_mut());
         let result = it.collect();
         Ok((result, it.get()))
     }
@@ -155,7 +155,7 @@ where
     move |input: I| {
         let (o, i) = parser.parse(input)?;
         let mut result = vec![o];
-        let mut it = ParserIter::new(i, parser.ref_mut());
+        let mut it = iterator(i, parser.ref_mut());
         it.for_each(|o| result.push(o));
         Ok((result, it.get()))
     }
@@ -218,7 +218,7 @@ where
     P: Parser<I, E>
 {
     move |input: I| {
-        let mut it = ParserIter::new(input, parser.ref_mut());
+        let mut it = iterator(input, parser.ref_mut());
         let result = it.take(n).collect();
         Ok((result, it.try_get()?))
     }
@@ -244,7 +244,7 @@ where
     P: Parser<I, E>
 {
     move |input: I| {
-        let mut it = ParserIter::new(input, parser.ref_mut());
+        let mut it = iterator(input, parser.ref_mut());
         it.for_each(|_| ());
         Ok(((), it.get()))
     }
@@ -271,7 +271,7 @@ where
 {
     move |input: I| {
         let (_, i) = parser.parse(input)?;
-        let mut it = ParserIter::new(i, parser.ref_mut());
+        let mut it = iterator(i, parser.ref_mut());
         it.for_each(|_| ());
         Ok(((), it.get()))
     }
@@ -331,7 +331,7 @@ where
     P: Parser<I, E>
 {
     move |input: I| {
-        let mut it = ParserIter::new(input, parser.ref_mut());
+        let mut it = iterator(input, parser.ref_mut());
         it.take(n).for_each(|_| ());
         Ok(((), it.try_get()?))
     }
@@ -364,7 +364,7 @@ where
             Ok((o, i)) => (vec![o], i),
             Err(_) => return Ok((vec![], input))
         };
-        let mut it = ParserIter::new(i, sep.ref_mut().andr(parser.ref_mut()));
+        let mut it = iterator(i, sep.ref_mut().andr(parser.ref_mut()));
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -394,7 +394,7 @@ where
     move |input: I| {
         let (o, i) = parser.parse(input)?;
         let mut os = vec![o];
-        let mut it = ParserIter::new(i, sep.ref_mut().andr(parser.ref_mut()));
+        let mut it = iterator(i, sep.ref_mut().andr(parser.ref_mut()));
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -426,7 +426,7 @@ where
             Ok((o, i)) => (vec![o], i),
             Err(_) => return Ok((vec![], input))
         };
-        let mut it = ParserIter::new(i, parser.ref_mut().andl(sep.ref_mut()));
+        let mut it = iterator(i, parser.ref_mut().andl(sep.ref_mut()));
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -457,7 +457,7 @@ where
     move |input: I| { 
         let (o, i) = parser.ref_mut().andl(sep.ref_mut()).parse(input.clone())?;
         let mut os = vec![o];
-        let mut it = ParserIter::new(i, parser.ref_mut().andl(sep.ref_mut()));
+        let mut it = iterator(i, parser.ref_mut().andl(sep.ref_mut()));
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -680,7 +680,7 @@ where
 /// use rtor::char::char;
 /// use rtor::combinator::pure;
 /// 
-/// fn parser(i: &str) -> ParseResult<(), &str> {
+/// fn parser(i: &str) -> ParseResult<char, &str> {
 ///     pure('1')(i)
 /// }
 /// 
@@ -832,7 +832,7 @@ where
     }
 }
 
-pub fn alt<I, E, A>(mut list: List) -> impl FnMut(I) -> ParseResult<A::Output, I, E> 
+pub fn alt<I, E, List>(mut list: List) -> impl FnMut(I) -> ParseResult<List::Output, I, E> 
 where 
     I: Input,
     E: ParseError<I>,
