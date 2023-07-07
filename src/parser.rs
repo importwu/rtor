@@ -3,15 +3,25 @@ use std::marker::PhantomData;
 use crate::{
     Input, 
     ParseError,
-    ParseResult
+    ParseResult,
 };
 
 ///A trait for parser
-pub trait Parser<I, E> {
+pub trait Parser<I: Input, E> {
     type Output;
 
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E>;
 
+    #[inline]
+    fn iter(self, input: I) -> Iter<I, E, Self> where Self: Sized {
+        Iter { 
+            parser: self, 
+            input, 
+            error: None 
+        }
+    }
+
+    #[inline]
     fn map<F, R>(self, f: F) -> Map<Self, F>
     where 
         F: FnMut(Self::Output) -> R,
@@ -20,6 +30,7 @@ pub trait Parser<I, E> {
         Map { parser: self, f }
     }
 
+    #[inline]
     fn map_err<F, R>(self, f: F) -> MapErr<E, Self, F> 
     where
         F: FnMut(E) -> R,
@@ -28,22 +39,27 @@ pub trait Parser<I, E> {
         MapErr { parser: self, f, marker: PhantomData }
     }
 
+    #[inline]
     fn or<P>(self, second: P) -> Or<Self, P> where Self: Sized {
         Or { first: self, second }
     }
 
+    #[inline]
     fn andl<P>(self, second: P) -> Andl<Self, P> where Self: Sized {
         Andl { first: self, second }
     }
 
+    #[inline]
     fn andr<P>(self, second: P) -> Andr<Self, P> where Self: Sized {
         Andr { first: self, second }
     }
 
+    #[inline]
     fn and<P>(self, second: P) -> And<Self, P> where Self: Sized {
         And { first: self, second }
     }
 
+    #[inline]
     fn and_then<F, P>(self, f: F) -> AndThen<Self, F> 
     where
         F: FnMut(Self::Output) -> P,
@@ -52,37 +68,44 @@ pub trait Parser<I, E> {
         AndThen { parser: self, f }
     }
 
+    #[inline]
     fn chainl1<P>(self, op: P) -> Chainl1<Self, P> where Self: Sized {
         Chainl1 { parser: self, op }
     }
 
+    #[inline]
     fn chainl<P>(self, op: P, value: Self::Output) -> Chainl<Self, P, Self::Output> where Self: Sized {
         Chainl { parser: self, op, value }
     }
 
+    #[inline]
     fn chainr1<P>(self, op: P) -> Chainr1<Self, P> where Self: Sized {
         Chainr1 { parser: self, op }
     }
 
+    #[inline]
     fn chainr<P>(self, op: P, value: Self::Output) -> Chainr<Self, P, Self::Output> where Self: Sized {
         Chainr { parser: self, op, value }
     }
     
+    #[inline]
     fn ignore(self) -> Ignore<Self> where Self: Sized {
         Ignore { parser: self }
     }
 
+    #[inline]
     fn ref_mut(&mut self) -> RefMut<Self> where Self: Sized {
         RefMut { parser: self }
     }
 
+    #[inline]
     fn expect(self, message: &str) -> Expect<E, Self> where Self: Sized {
         Expect { parser: self, message: message.to_owned(), marker: PhantomData }
     }
 
 }
 
-impl<F, O, I, E> Parser<I, E> for F where F: FnMut(I) -> ParseResult<O, I, E> {
+impl<F, O, I: Input, E> Parser<I, E> for F where F: FnMut(I) -> ParseResult<O, I, E> {
     type Output = O;
 
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
@@ -96,7 +119,7 @@ pub struct Map<P, F> {
     f: F,
 }
 
-impl<I, E, P, F, R> Parser<I, E> for Map<P, F> 
+impl<I: Input, E, P, F, R> Parser<I, E> for Map<P, F> 
 where
     P: Parser<I, E>,
     F: FnMut(P::Output) -> R
@@ -116,7 +139,7 @@ pub struct MapErr<E, P, F> {
     marker: PhantomData<E>
 }
 
-impl<I, E, P, F, R> Parser<I, R> for MapErr<E, P, F> 
+impl<I: Input, E, P, F, R> Parser<I, R> for MapErr<E, P, F> 
 where
     P: Parser<I, E>,
     F: FnMut(E) -> R
@@ -163,7 +186,7 @@ pub struct Andl<A, B> {
     second: B
 }
 
-impl<I, E, A, B> Parser<I, E> for Andl<A, B> 
+impl<I: Input, E, A, B> Parser<I, E> for Andl<A, B> 
 where
     A: Parser<I, E>,
     B: Parser<I, E>
@@ -183,7 +206,7 @@ pub struct Andr<A, B> {
     second: B,
 }
 
-impl<I, E, A, B> Parser<I, E> for Andr<A, B> 
+impl<I: Input, E, A, B> Parser<I, E> for Andr<A, B> 
 where
     A: Parser<I, E>,
     B: Parser<I, E>
@@ -202,7 +225,7 @@ pub struct And<A, B> {
     second: B,
 }
 
-impl<I, E, A, B> Parser<I, E> for And<A, B> 
+impl<I: Input, E, A, B> Parser<I, E> for And<A, B> 
 where
     A: Parser<I, E>,
     B: Parser<I, E>
@@ -222,7 +245,7 @@ pub struct AndThen<P, F> {
     f: F,
 }
 
-impl<I, E, A, B, F> Parser<I, E> for AndThen<A, F> 
+impl<I: Input, E, A, B, F> Parser<I, E> for AndThen<A, F> 
 where
     A: Parser<I, E>,
     B: Parser<I, E>,
@@ -241,15 +264,15 @@ pub struct Ignore<P> {
     parser: P,
 }
 
-impl<I, E, P> Parser<I, E> for Ignore<P> 
+impl<I: Input, E, P> Parser<I, E> for Ignore<P> 
 where
     P: Parser<I, E>
 {
     type Output = ();
     
+    #[inline]
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
-        let (_, i) = self.parser.parse(input)?;
-        Ok(((), i))
+        self.parser.parse(input).map(|(_, i)| ((), i))
     }
 }
 
@@ -257,12 +280,13 @@ pub struct RefMut<'a, P> {
     parser: &'a mut P,
 }
 
-impl<I, E, P> Parser<I, E> for RefMut<'_, P> 
+impl<I: Input, E, P> Parser<I, E> for RefMut<'_, P> 
 where
     P: Parser<I, E>
 {
     type Output = P::Output;
     
+    #[inline]
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         self.parser.parse(input)
     }
@@ -404,3 +428,46 @@ where
         Ok((left, input))
     }
 }  
+
+#[derive(Debug)]
+pub struct Iter<I, E, P> {
+    parser: P,
+    input: I,
+    error: Option<E>,
+}
+
+impl<I, E, P> Iter<I, E, P> {
+    pub fn get(self) -> I {
+        self.input
+    }
+
+    pub fn try_get(self) -> Result<I, E> {
+        match self.error {
+            None => Ok(self.input),
+            Some(e) => Err(e)
+        }
+    }
+}
+
+impl<I, E, P> Iterator for &mut Iter<I, E, P> 
+where
+    I: Input,
+    P: Parser<I, E>
+{
+    type Item = P::Output;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.error.is_some() { return None }
+
+        match self.parser.parse(self.input.clone()) {
+            Ok((o, i)) => {
+                self.input = i;
+                Some(o)
+            }
+            Err(e) => {
+                self.error = Some(e);
+                None
+            }
+        }
+    }
+}

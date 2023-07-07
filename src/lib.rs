@@ -3,7 +3,6 @@ mod error;
 pub mod char;
 pub mod combinator;
 pub mod token;
-mod iter;
 mod input;
 
 pub use self::{
@@ -18,10 +17,7 @@ pub use self::{
         Pos,
         State
     },
-    iter::{
-        ParserIter, 
-        iterator
-    }
+
 };
 
 pub type ParseResult<O, I, E = SimpleError<<I as Input>::Token>> = Result<(O, I), E>;

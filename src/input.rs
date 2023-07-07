@@ -2,7 +2,7 @@ use crate::AsChar;
 
 pub trait Input: Clone {
     type Token: Clone;
-    type Buffer;
+    type Buffer: ?Sized;
 
     fn next(&mut self) -> Option<Self::Token>;
 
@@ -10,12 +10,12 @@ pub trait Input: Clone {
 
     fn diff(&self, other: &Self) -> Self;
 
-    fn as_buf(&self) -> Self::Buffer;
+    fn as_buf(&self) -> &Self::Buffer;
 }
 
 impl<'a> Input for &'a str {
     type Token = char;
-    type Buffer = &'a str;
+    type Buffer = str;
 
     fn next(&mut self) -> Option<Self::Token> {
         let mut chars = self.chars();
@@ -33,14 +33,14 @@ impl<'a> Input for &'a str {
         &self[..offset]
     }
 
-    fn as_buf(&self) -> Self::Buffer {
+    fn as_buf(&self) -> &Self::Buffer {
         self
     }
 }
 
 impl<'a, T: Clone> Input for &'a [T] {
     type Token = T;
-    type Buffer = &'a [T];
+    type Buffer = [T];
 
     fn next(&mut self) -> Option<Self::Token> {
         let mut iter = self.iter();
@@ -50,7 +50,7 @@ impl<'a, T: Clone> Input for &'a [T] {
     }
     
     fn peek(&mut self) -> Option<Self::Token> {
-        self.iter().cloned().next()
+        Some(self.iter().next()?.clone())
     }
     
     fn diff(&self, other: &Self) -> Self {
@@ -58,7 +58,7 @@ impl<'a, T: Clone> Input for &'a [T] {
         &self[..offset]
     }
 
-    fn as_buf(&self) -> Self::Buffer {
+    fn as_buf(&self) -> &Self::Buffer {
         self
     }
 }
@@ -140,7 +140,7 @@ where
         }
     }
 
-    fn as_buf(&self) -> Self::Buffer {
+    fn as_buf(&self) -> &Self::Buffer {
         self.input.as_buf()
     }
 }

@@ -1,26 +1,10 @@
-use std::ops::{
-    RangeBounds,
-    Bound
-};
-
 use crate::{
     Input, 
     Parser, 
     ParseError, 
     ParseResult,
-    iterator, 
     Alt
 };
-
-
-
-#[test]
-fn test() {
-    let mut parser = many_till(super::char::char('a'), super::char::char('b'));
-    let result: ParseResult<Vec<char>, &str> = parser.parse("aab");
-
-    println!("{:?}", result);
-}
 
 
 /// Apply `parser`, if fails, returns [`None`] without cosuming input, otherwise 
@@ -127,7 +111,7 @@ where
     P: Parser<I, E>,
 {
     move |input: I| {
-        let mut it = iterator(input, parser.ref_mut());
+        let mut it = parser.ref_mut().iter(input);
         let result = it.collect();
         Ok((result, it.get()))
     }
@@ -155,11 +139,12 @@ where
     move |input: I| {
         let (o, i) = parser.parse(input)?;
         let mut result = vec![o];
-        let mut it = iterator(i, parser.ref_mut());
+        let mut it = parser.ref_mut().iter(i);
         it.for_each(|o| result.push(o));
         Ok((result, it.get()))
     }
 }
+
 
 /// Apply `parser` zero or more times until parser `pred` succeed, the results in a [`Vec`].
 /// # Example
@@ -218,7 +203,7 @@ where
     P: Parser<I, E>
 {
     move |input: I| {
-        let mut it = iterator(input, parser.ref_mut());
+        let mut it = parser.ref_mut().iter(input);
         let result = it.take(n).collect();
         Ok((result, it.try_get()?))
     }
@@ -244,7 +229,7 @@ where
     P: Parser<I, E>
 {
     move |input: I| {
-        let mut it = iterator(input, parser.ref_mut());
+        let mut it = parser.ref_mut().iter(input);
         it.for_each(|_| ());
         Ok(((), it.get()))
     }
@@ -271,7 +256,7 @@ where
 {
     move |input: I| {
         let (_, i) = parser.parse(input)?;
-        let mut it = iterator(i, parser.ref_mut());
+        let mut it = parser.ref_mut().iter(i);
         it.for_each(|_| ());
         Ok(((), it.get()))
     }
@@ -331,7 +316,7 @@ where
     P: Parser<I, E>
 {
     move |input: I| {
-        let mut it = iterator(input, parser.ref_mut());
+        let mut it = parser.ref_mut().iter(input);
         it.take(n).for_each(|_| ());
         Ok(((), it.try_get()?))
     }
@@ -364,7 +349,7 @@ where
             Ok((o, i)) => (vec![o], i),
             Err(_) => return Ok((vec![], input))
         };
-        let mut it = iterator(i, sep.ref_mut().andr(parser.ref_mut()));
+        let mut it = sep.ref_mut().andr(parser.ref_mut()).iter(i);
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -394,7 +379,7 @@ where
     move |input: I| {
         let (o, i) = parser.parse(input)?;
         let mut os = vec![o];
-        let mut it = iterator(i, sep.ref_mut().andr(parser.ref_mut()));
+        let mut it = sep.ref_mut().andr(parser.ref_mut()).iter(i);
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -426,7 +411,7 @@ where
             Ok((o, i)) => (vec![o], i),
             Err(_) => return Ok((vec![], input))
         };
-        let mut it = iterator(i, parser.ref_mut().andl(sep.ref_mut()));
+        let mut it = parser.ref_mut().andl(sep.ref_mut()).iter(i);
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -457,7 +442,7 @@ where
     move |input: I| { 
         let (o, i) = parser.ref_mut().andl(sep.ref_mut()).parse(input.clone())?;
         let mut os = vec![o];
-        let mut it = iterator(i, parser.ref_mut().andl(sep.ref_mut()));
+        let mut it = parser.ref_mut().andl(sep.ref_mut()).iter(i);
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -652,6 +637,14 @@ where
     }
 }
 
+pub fn empty<I, E>(input: I) ->  ParseResult<(), I, E>
+where
+    I: Input,
+    E: ParseError<I>
+{
+    Ok(((), input))
+}
+
 /// Always fail.
 /// # Example
 /// ```
@@ -696,142 +689,6 @@ where
     move|input: I| Ok((t.clone(), input))
 }
 
-fn map_range<R: RangeBounds<usize>>(range: R) -> (Option<usize>, Option<usize>) {
-    match range.start_bound() {
-        Bound::Excluded(&s) => match range.end_bound() {
-            Bound::Excluded(&e) => (Some(s.saturating_sub(1)), Some(e.saturating_sub(1))),
-            Bound::Included(&e) => (Some(s), Some(e)),
-            Bound::Unbounded => (Some(s), None),
-        }
-        Bound::Included(&s) => match range.end_bound() {
-            Bound::Excluded(&e) => (Some(s), Some(e.saturating_sub(1))),
-            Bound::Included(&e) => (Some(s), Some(e)),
-            Bound::Unbounded => (Some(s), None),
-        }
-        Bound::Unbounded => match range.end_bound() {
-            Bound::Excluded(&e) => (None, Some(e.saturating_sub(1))),
-            Bound::Included(&e) => (None, Some(e)),
-            Bound::Unbounded => (None, None),
-        }
-    }
-}
-
-pub fn manyr<I, E, P, R>(mut parser: P, range: R) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>
-where
-    I: Input,
-    P: Parser<I, E>,
-    R: RangeBounds<usize>
-{
-    let (start, end) = map_range(range);
-    move |mut input: I| {
-        let mut os = vec![];
-        match start {
-            Some(s) => {
-                for _ in 0..s {
-                    let (o, i) = parser.parse(input.clone())?;
-                    input = i;
-                    os.push(o);
-                }
-                match end {
-                    Some(e) => {
-                        for _ in 0..(e.saturating_sub(s)) {
-                            match parser.parse(input.clone()) {
-                                Ok((o, i)) => {
-                                    input = i;
-                                    os.push(o);
-                                }
-                                Err(_) => break
-                            }
-                        }
-                    }
-                    None => {
-                        while let Ok((o, i)) = parser.parse(input.clone()) {
-                            input = i;
-                            os.push(o);
-                        }
-                    }
-                }
-            }
-            None => match end {
-                Some(e) => {
-                    for _ in 0..e {
-                        match parser.parse(input.clone()) {
-                            Ok((o, i)) => {
-                                input = i;
-                                os.push(o);
-                            }
-                            Err(_) => break
-                        }
-                    }
-                }
-                None => {
-                    while let Ok((o, i)) = parser.parse(input.clone()) {
-                        input = i;
-                        os.push(o);
-                    }
-                }
-            }
-        }
-
-        Ok((os, input))
-    }
-}
-
-pub fn skipr<I, E, P, R>(mut parser: P, range: R) -> impl FnMut(I) -> ParseResult<(), I, E> 
-where
-    I: Input,
-    P: Parser<I, E>,
-    R: RangeBounds<usize>
-{
-    let (start, end) = map_range(range);
-    move |mut input: I| {
-        match start {
-            Some(s) => {
-                for _ in 0..s {
-                    let (_, i) = parser.parse(input.clone())?;
-                    input = i;
-                }
-                match end {
-                    Some(e) => {
-                        for _ in 0..(e - s) {
-                            match parser.parse(input.clone()) {
-                                Ok((_, i)) => {
-                                    input = i;
-                                }
-                                Err(_) => break
-                            }
-                        }
-                    }
-                    None => {
-                        while let Ok((_, i)) = parser.parse(input.clone()) {
-                            input = i;
-                        }
-                    }
-                }
-            }
-            None => match end {
-                Some(e) => {
-                    for _ in 0..e {
-                        match parser.parse(input.clone()) {
-                            Ok((_, i)) => {
-                                input = i;
-                            }
-                            Err(_) => break
-                        }
-                    }
-                }
-                None => {
-                    while let Ok((_, i)) = parser.parse(input.clone()) {
-                        input = i;
-                    }
-                }
-            }
-        }
-
-        Ok(((), input))
-    }
-}
-
 pub fn alt<I, E, List>(mut list: List) -> impl FnMut(I) -> ParseResult<List::Output, I, E> 
 where 
     I: Input,
@@ -841,9 +698,31 @@ where
     move |input: I| list.choice(input)
 }
 
+
+impl<I: Input, E> Parser<I, E> for () {
+    type Output = ();
+
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
+        Ok(((), input))
+    }
+}
+
+impl<P, I: Input, E> Parser<I, E> for (P,) 
+where 
+    I: Input,
+    P: Parser<I, E>
+{
+    type Output = P::Output;
+
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
+        self.0.parse(input)
+    }
+}
+
+
 macro_rules! tuple_parser_impl {
     ($a: ident, $($rest: ident),+) => {
-        impl<Input, Error, $a, $($rest),+> Parser<Input, Error> for ($a, $($rest),+) 
+        impl<Input: super::input::Input, Error, $a, $($rest),+> Parser<Input, Error> for ($a, $($rest),+) 
         where
             $a: Parser<Input, Error>,
             $($rest: Parser<Input, Error>),+
