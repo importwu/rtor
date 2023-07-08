@@ -99,8 +99,8 @@ pub trait Parser<I: Input, E> {
     }
 
     #[inline]
-    fn expect(self, message: &str) -> Expect<E, Self> where Self: Sized {
-        Expect { parser: self, message: message.to_owned(), marker: PhantomData }
+    fn expect(self, message: &str) -> Expect<Self> where Self: Sized {
+        Expect { parser: self, message: message.to_owned() }
     }
 
 }
@@ -336,13 +336,12 @@ where
 }
 
 #[derive(Clone)]
-pub struct Expect<E, P> {
+pub struct Expect<P> {
     parser: P,
     message: String,
-    marker: PhantomData<E>
 }
 
-impl<I, E, P> Parser<I, E> for Expect<E, P> 
+impl<I, E, P> Parser<I, E> for Expect<P> 
 where
     I: Input,
     E: ParseError<I>,
