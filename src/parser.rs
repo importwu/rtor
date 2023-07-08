@@ -7,13 +7,13 @@ use crate::{
 };
 
 ///A trait for parser
-pub trait Parser<I: Input, E> {
+pub trait Parser<I, E> {
     type Output;
 
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E>;
 
     #[inline]
-    fn parse_iter(&mut self, input: I) -> ParseIter<'_, I, E, Self> where Self: Sized {
+    fn parse_iter(&mut self, input: I) -> ParseIter<'_, Self, I, E> where Self: Sized {
         ParseIter { 
             parser: self, 
             input, 
@@ -22,70 +22,105 @@ pub trait Parser<I: Input, E> {
     }
 
     #[inline]
-    fn map<F, R>(self, f: F) -> Map<Self, F>
+    fn map<R, F>(self, f: F) -> Map<Self, F>
     where 
-        F: FnMut(Self::Output) -> R,
-        Self: Sized
+        Self: Sized,
+        F: FnMut(Self::Output) -> R
     {
         Map { parser: self, f }
     }
 
     #[inline]
-    fn map_err<F, R>(self, f: F) -> MapErr<E, Self, F> 
+    fn map_err<R, F>(self, f: F) -> MapErr<Self, F, E> 
     where
-        F: FnMut(E) -> R,
-        Self: Sized
+        Self: Sized,
+        F: FnMut(E) -> R
     {
         MapErr { parser: self, f, marker: PhantomData }
     }
 
     #[inline]
-    fn or<P>(self, second: P) -> Or<Self, P> where Self: Sized {
+    fn or<P>(self, second: P) -> Or<Self, P> 
+    where 
+        Self: Sized,
+        P: Parser<I, E> 
+    {
         Or { first: self, second }
     }
 
     #[inline]
-    fn andl<P>(self, second: P) -> Andl<Self, P> where Self: Sized {
+    fn andl<P>(self, second: P) -> Andl<Self, P> 
+    where
+        Self: Sized, 
+        P: Parser<I, E> 
+    {
         Andl { first: self, second }
     }
 
     #[inline]
-    fn andr<P>(self, second: P) -> Andr<Self, P> where Self: Sized {
+    fn andr<P>(self, second: P) -> Andr<Self, P> 
+    where 
+        Self: Sized,
+        P: Parser<I, E> 
+    {
         Andr { first: self, second }
     }
 
     #[inline]
-    fn and<P>(self, second: P) -> And<Self, P> where Self: Sized {
+    fn and<P>(self, second: P) -> And<Self, P> 
+    where 
+        Self: Sized,
+        P: Parser<I, E> 
+    {
         And { first: self, second }
     }
 
     #[inline]
-    fn and_then<F, P>(self, f: F) -> AndThen<Self, F> 
+    fn and_then<P, F>(self, f: F) -> AndThen<Self, F> 
     where
+        Self: Sized,
+        P: Parser<I, E>,
         F: FnMut(Self::Output) -> P,
-        Self: Sized
     {
         AndThen { parser: self, f }
     }
 
     #[inline]
-    fn chainl1<P>(self, op: P) -> Chainl1<Self, P> where Self: Sized {
-        Chainl1 { parser: self, op }
-    }
-
-    #[inline]
-    fn chainl<P>(self, op: P, value: Self::Output) -> Chainl<Self, P, Self::Output> where Self: Sized {
+    fn chainl<P>(self, op: P, value: Self::Output) -> Chainl<Self, P, Self::Output> 
+    where 
+        Self: Sized,
+        P: Parser<I, E>,
+        Self::Output: Clone
+    {
         Chainl { parser: self, op, value }
     }
 
     #[inline]
-    fn chainr1<P>(self, op: P) -> Chainr1<Self, P> where Self: Sized {
-        Chainr1 { parser: self, op }
+    fn chainl1<P>(self, op: P) -> Chainl1<Self, P> 
+    where
+        Self: Sized,
+        P: Parser<I, E>,
+    {
+        Chainl1 { parser: self, op }
     }
 
     #[inline]
-    fn chainr<P>(self, op: P, value: Self::Output) -> Chainr<Self, P, Self::Output> where Self: Sized {
+    fn chainr<P>(self, op: P, value: Self::Output) -> Chainr<Self, P, Self::Output> 
+    where 
+        Self: Sized, 
+        P: Parser<I, E>,
+        Self::Output: Clone
+    {
         Chainr { parser: self, op, value }
+    }
+
+    #[inline]
+    fn chainr1<P>(self, op: P) -> Chainr1<Self, P> 
+    where 
+        Self: Sized,
+        P: Parser<I, E>
+    {
+        Chainr1 { parser: self, op }
     }
     
     #[inline]
@@ -105,7 +140,7 @@ pub trait Parser<I: Input, E> {
 
 }
 
-impl<F, O, I: Input, E> Parser<I, E> for F where F: FnMut(I) -> ParseResult<O, I, E> {
+impl<F, O, I, E> Parser<I, E> for F where F: FnMut(I) -> ParseResult<O, I, E> {
     type Output = O;
 
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
@@ -114,13 +149,13 @@ impl<F, O, I: Input, E> Parser<I, E> for F where F: FnMut(I) -> ParseResult<O, I
 }
 
 #[derive(Debug)]
-pub struct ParseIter<'a, I, E, P> {
+pub struct ParseIter<'a, P, I, E> {
     parser: &'a mut P,
     input: I,
     error: Option<E>,
 }
 
-impl<I, E, P> ParseIter<'_, I, E, P> {
+impl<P, I, E> ParseIter<'_, P, I, E> {
     pub fn get(self) -> I {
         self.input
     }
@@ -133,10 +168,10 @@ impl<I, E, P> ParseIter<'_, I, E, P> {
     }
 }
 
-impl<I, E, P> Iterator for &mut ParseIter<'_, I, E, P> 
+impl<P, I, E> Iterator for &mut ParseIter<'_, P, I, E> 
 where
-    I: Input,
-    P: Parser<I, E>
+    P: Parser<I, E>,
+    I: Input
 {
     type Item = P::Output;
 
@@ -162,7 +197,7 @@ pub struct Map<P, F> {
     f: F,
 }
 
-impl<I: Input, E, P, F, R> Parser<I, E> for Map<P, F> 
+impl<R, P, I, E, F> Parser<I, E> for Map<P, F> 
 where
     P: Parser<I, E>,
     F: FnMut(P::Output) -> R
@@ -176,13 +211,13 @@ where
 }
 
 #[derive(Clone)]
-pub struct MapErr<E, P, F> {
+pub struct MapErr<P, F, E> {
     parser: P,
     f: F,
     marker: PhantomData<E>
 }
 
-impl<I: Input, E, P, F, R> Parser<I, R> for MapErr<E, P, F> 
+impl<R, P, I, E, F> Parser<I, R> for MapErr<P, F, E> 
 where
     P: Parser<I, E>,
     F: FnMut(E) -> R
@@ -203,11 +238,11 @@ pub struct Or<A, B> {
     second: B,
 }
 
-impl<I, E, A, B> Parser<I, E> for Or<A, B> 
+impl<A, B, I, E> Parser<I, E> for Or<A, B> 
 where
-    I: Input, 
     A: Parser<I, E>,
     B: Parser<I, E, Output = A::Output>,
+    I: Input, 
     E: ParseError<I>
 {
     type Output = A::Output;
@@ -229,7 +264,7 @@ pub struct Andl<A, B> {
     second: B
 }
 
-impl<I: Input, E, A, B> Parser<I, E> for Andl<A, B> 
+impl<A, B, I, E> Parser<I, E> for Andl<A, B> 
 where
     A: Parser<I, E>,
     B: Parser<I, E>
@@ -249,7 +284,7 @@ pub struct Andr<A, B> {
     second: B,
 }
 
-impl<I: Input, E, A, B> Parser<I, E> for Andr<A, B> 
+impl<A, B, I, E> Parser<I, E> for Andr<A, B> 
 where
     A: Parser<I, E>,
     B: Parser<I, E>
@@ -268,7 +303,7 @@ pub struct And<A, B> {
     second: B,
 }
 
-impl<I: Input, E, A, B> Parser<I, E> for And<A, B> 
+impl<A, B, I, E> Parser<I, E> for And<A, B> 
 where
     A: Parser<I, E>,
     B: Parser<I, E>
@@ -288,7 +323,7 @@ pub struct AndThen<P, F> {
     f: F,
 }
 
-impl<I: Input, E, A, B, F> Parser<I, E> for AndThen<A, F> 
+impl<A, B, I, E, F> Parser<I, E> for AndThen<A, F> 
 where
     A: Parser<I, E>,
     B: Parser<I, E>,
@@ -307,15 +342,15 @@ pub struct Ignore<P> {
     parser: P,
 }
 
-impl<I: Input, E, P> Parser<I, E> for Ignore<P> 
-where
-    P: Parser<I, E>
-{
+impl<P, I, E> Parser<I, E> for Ignore<P> where P: Parser<I, E> {
     type Output = ();
     
     #[inline]
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
-        self.parser.parse(input).map(|(_, i)| ((), i))
+        match self.parser.parse(input) {
+            Ok((_, i)) => Ok(((), i)),
+            Err(e) => Err(e)
+        }
     }
 }
 
@@ -323,10 +358,7 @@ pub struct RefMut<'a, P> {
     parser: &'a mut P,
 }
 
-impl<I: Input, E, P> Parser<I, E> for RefMut<'_, P> 
-where
-    P: Parser<I, E>
-{
+impl<P, I, E> Parser<I, E> for RefMut<'_, P> where P: Parser<I, E> {
     type Output = P::Output;
     
     #[inline]
@@ -341,11 +373,11 @@ pub struct Expect<P> {
     message: String,
 }
 
-impl<I, E, P> Parser<I, E> for Expect<P> 
+impl<P, I, E> Parser<I, E> for Expect<P> 
 where
-    I: Input,
-    E: ParseError<I>,
     P: Parser<I, E>,
+    I: Input,
+    E: ParseError<I>
 {
     type Output = P::Output;
 
@@ -363,7 +395,7 @@ pub struct Chainl1<A, B> {
     op: B,
 }
 
-impl<I, E, A, B, F> Parser<I, E> for Chainl1<A, B> 
+impl<A, B, I, E, F> Parser<I, E> for Chainl1<A, B> 
 where
     I: Input,
     A: Parser<I, E>,
