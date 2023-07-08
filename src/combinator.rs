@@ -111,7 +111,7 @@ where
     P: Parser<I, E>,
 {
     move |input: I| {
-        let mut it = parser.ref_mut().iter(input);
+        let mut it = parser.parse_iter(input);
         let result = it.collect();
         Ok((result, it.get()))
     }
@@ -139,7 +139,7 @@ where
     move |input: I| {
         let (o, i) = parser.parse(input)?;
         let mut result = vec![o];
-        let mut it = parser.ref_mut().iter(i);
+        let mut it = parser.parse_iter(i);
         it.for_each(|o| result.push(o));
         Ok((result, it.get()))
     }
@@ -203,7 +203,7 @@ where
     P: Parser<I, E>
 {
     move |input: I| {
-        let mut it = parser.ref_mut().iter(input);
+        let mut it = parser.parse_iter(input);
         let result = it.take(n).collect();
         Ok((result, it.try_get()?))
     }
@@ -229,7 +229,7 @@ where
     P: Parser<I, E>
 {
     move |input: I| {
-        let mut it = parser.ref_mut().iter(input);
+        let mut it = parser.parse_iter(input);
         it.for_each(|_| ());
         Ok(((), it.get()))
     }
@@ -256,7 +256,7 @@ where
 {
     move |input: I| {
         let (_, i) = parser.parse(input)?;
-        let mut it = parser.ref_mut().iter(i);
+        let mut it = parser.parse_iter(i);
         it.for_each(|_| ());
         Ok(((), it.get()))
     }
@@ -316,7 +316,7 @@ where
     P: Parser<I, E>
 {
     move |input: I| {
-        let mut it = parser.ref_mut().iter(input);
+        let mut it = parser.parse_iter(input);
         it.take(n).for_each(|_| ());
         Ok(((), it.try_get()?))
     }
@@ -349,7 +349,8 @@ where
             Ok((o, i)) => (vec![o], i),
             Err(_) => return Ok((vec![], input))
         };
-        let mut it = sep.ref_mut().andr(parser.ref_mut()).iter(i);
+        let mut parser = sep.ref_mut().andr(parser.ref_mut());
+        let mut it = parser.parse_iter(i);
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -379,7 +380,8 @@ where
     move |input: I| {
         let (o, i) = parser.parse(input)?;
         let mut os = vec![o];
-        let mut it = sep.ref_mut().andr(parser.ref_mut()).iter(i);
+        let mut parser = sep.ref_mut().andr(parser.ref_mut());
+        let mut it = parser.parse_iter(i);
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -411,7 +413,8 @@ where
             Ok((o, i)) => (vec![o], i),
             Err(_) => return Ok((vec![], input))
         };
-        let mut it = parser.ref_mut().andl(sep.ref_mut()).iter(i);
+        let mut parser = parser.ref_mut().andl(sep.ref_mut());
+        let mut it = parser.parse_iter(i);
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -442,7 +445,8 @@ where
     move |input: I| { 
         let (o, i) = parser.ref_mut().andl(sep.ref_mut()).parse(input.clone())?;
         let mut os = vec![o];
-        let mut it = parser.ref_mut().andl(sep.ref_mut()).iter(i);
+        let mut parser = parser.ref_mut().andl(sep.ref_mut());
+        let mut it = parser.parse_iter(i);
         it.for_each(|o| os.push(o));
         Ok((os, it.get()))
     }
@@ -718,7 +722,6 @@ where
         self.0.parse(input)
     }
 }
-
 
 macro_rules! tuple_parser_impl {
     ($a: ident, $($rest: ident),+) => {

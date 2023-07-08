@@ -13,8 +13,8 @@ pub trait Parser<I: Input, E> {
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E>;
 
     #[inline]
-    fn iter(self, input: I) -> Iter<I, E, Self> where Self: Sized {
-        Iter { 
+    fn parse_iter(&mut self, input: I) -> ParseIter<'_, I, E, Self> where Self: Sized {
+        ParseIter { 
             parser: self, 
             input, 
             error: None 
@@ -110,6 +110,49 @@ impl<F, O, I: Input, E> Parser<I, E> for F where F: FnMut(I) -> ParseResult<O, I
 
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         (self)(input)
+    }
+}
+
+#[derive(Debug)]
+pub struct ParseIter<'a, I, E, P> {
+    parser: &'a mut P,
+    input: I,
+    error: Option<E>,
+}
+
+impl<I, E, P> ParseIter<'_, I, E, P> {
+    pub fn get(self) -> I {
+        self.input
+    }
+
+    pub fn try_get(self) -> Result<I, E> {
+        match self.error {
+            None => Ok(self.input),
+            Some(e) => Err(e)
+        }
+    }
+}
+
+impl<I, E, P> Iterator for &mut ParseIter<'_, I, E, P> 
+where
+    I: Input,
+    P: Parser<I, E>
+{
+    type Item = P::Output;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.error.is_some() { return None }
+
+        match self.parser.parse(self.input.clone()) {
+            Ok((o, i)) => {
+                self.input = i;
+                Some(o)
+            }
+            Err(e) => {
+                self.error = Some(e);
+                None
+            }
+        }
     }
 }
 
@@ -428,46 +471,3 @@ where
         Ok((left, input))
     }
 }  
-
-#[derive(Debug)]
-pub struct Iter<I, E, P> {
-    parser: P,
-    input: I,
-    error: Option<E>,
-}
-
-impl<I, E, P> Iter<I, E, P> {
-    pub fn get(self) -> I {
-        self.input
-    }
-
-    pub fn try_get(self) -> Result<I, E> {
-        match self.error {
-            None => Ok(self.input),
-            Some(e) => Err(e)
-        }
-    }
-}
-
-impl<I, E, P> Iterator for &mut Iter<I, E, P> 
-where
-    I: Input,
-    P: Parser<I, E>
-{
-    type Item = P::Output;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.error.is_some() { return None }
-
-        match self.parser.parse(self.input.clone()) {
-            Ok((o, i)) => {
-                self.input = i;
-                Some(o)
-            }
-            Err(e) => {
-                self.error = Some(e);
-                None
-            }
-        }
-    }
-}
