@@ -390,32 +390,6 @@ where
 }
 
 #[derive(Clone)]
-pub struct Chainl1<A, B> {
-    parser: A,
-    op: B,
-}
-
-impl<A, B, I, E, F> Parser<I, E> for Chainl1<A, B> 
-where
-    I: Input,
-    A: Parser<I, E>,
-    B: Parser<I, E, Output = F>,
-    F: Fn(A::Output, A::Output) -> A::Output
-{
-    type Output = A::Output;
-
-    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
-        let (mut left, mut input) = self.parser.parse(input)?;
-        while let Ok((f, i)) = self.op.parse(input.clone()) {
-            let (right, i) = self.parser.parse(i)?;
-            left = f(left, right);
-            input = i;
-        }
-        Ok((left, input))
-    }
-}  
-
-#[derive(Clone)]
 pub struct Chainl<A, B, V> {
     parser: A,
     op: B,
@@ -447,12 +421,12 @@ where
 }  
 
 #[derive(Clone)]
-pub struct Chainr1<A, B> {
+pub struct Chainl1<A, B> {
     parser: A,
     op: B,
 }
 
-impl<I, E, A, B, F> Parser<I, E> for Chainr1<A, B> 
+impl<A, B, I, E, F> Parser<I, E> for Chainl1<A, B> 
 where
     I: Input,
     A: Parser<I, E>,
@@ -464,7 +438,7 @@ where
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         let (mut left, mut input) = self.parser.parse(input)?;
         while let Ok((f, i)) = self.op.parse(input.clone()) {
-            let (right, i) = self.parse(i)?;
+            let (right, i) = self.parser.parse(i)?;
             left = f(left, right);
             input = i;
         }
@@ -494,6 +468,32 @@ where
             Ok(t) => t,
             Err(_) => return Ok((self.value.clone(), input))
         };
+        while let Ok((f, i)) = self.op.parse(input.clone()) {
+            let (right, i) = self.parse(i)?;
+            left = f(left, right);
+            input = i;
+        }
+        Ok((left, input))
+    }
+}  
+
+#[derive(Clone)]
+pub struct Chainr1<A, B> {
+    parser: A,
+    op: B,
+}
+
+impl<I, E, A, B, F> Parser<I, E> for Chainr1<A, B> 
+where
+    I: Input,
+    A: Parser<I, E>,
+    B: Parser<I, E, Output = F>,
+    F: Fn(A::Output, A::Output) -> A::Output
+{
+    type Output = A::Output;
+
+    fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
+        let (mut left, mut input) = self.parser.parse(input)?;
         while let Ok((f, i)) = self.op.parse(input.clone()) {
             let (right, i) = self.parse(i)?;
             left = f(left, right);
