@@ -90,6 +90,108 @@ where
     }
 }
 
+
+pub fn take<I, E>(n: usize) -> impl FnMut(I) -> ParseResult<I, I, E> 
+where
+    I: Input,
+    E: ParseError<I>
+{
+    move |mut input: I| {
+        let src = input.clone();
+        for _ in 0..n {
+            match input.next() {
+                Some(_) => continue,
+                None => return Err(E::unexpect(None, input))
+            }
+        }
+        Ok((src.diff(&input), input))
+    }
+}
+
+pub fn take_while<F, I, E>(mut f: F) -> impl FnMut(I) -> ParseResult<I, I, E> 
+where
+    I: Input,
+    E: ParseError<I>,
+    F: FnMut(&I::Token) -> bool
+{
+    move |mut input: I| {
+        let src = input.clone();
+        while let Some(t) = input.peek() {
+            if f(&t) {
+                input.next();
+                continue;
+            }
+            break;
+        }
+        Ok((src.diff(&input), input))
+    }
+}
+
+pub fn take_while1<F, I, E>(mut f: F) -> impl FnMut(I) -> ParseResult<I, I, E> 
+where
+    I: Input,
+    E: ParseError<I>,
+    F: FnMut(&I::Token) -> bool
+{
+    move |mut input: I| {
+        let src = input.clone();
+        match input.peek() {
+            Some(t) if f(&t) => { input.next(); }
+            other => return Err(E::unexpect(other, input))
+        }
+        while let Some(t) = input.peek() {
+            if f(&t) {
+                input.next();
+                continue;
+            }
+            break;
+        }
+        Ok((src.diff(&input), input))
+    }
+}
+
+pub fn take_till<F, I, E>(mut f: F) -> impl FnMut(I) -> ParseResult<I, I, E> 
+where
+    I: Input,
+    E: ParseError<I>,
+    F: FnMut(&I::Token) -> bool
+{
+    move |mut input: I| {
+        let src = input.clone();
+        loop {
+            match input.peek() {
+                Some(t) if f(&t) => break,
+                Some(_) => { input.next(); }
+                None => return Err(E::unexpect(None, input))
+            }
+        }
+        Ok((src.diff(&input), input))
+    }
+}
+
+pub fn take_till1<F, I, E>(mut f: F) -> impl FnMut(I) -> ParseResult<I, I, E> 
+where
+    I: Input,
+    E: ParseError<I>,
+    F: FnMut(&I::Token) -> bool
+{
+    move |mut input: I| {
+        let src = input.clone();
+        match input.peek() {
+            Some(t) if f(&t) => return Err(E::unexpect(Some(t), input)),
+            _ => { input.next(); }
+        }
+        loop {
+            match input.peek() {
+                Some(t) if f(&t) => break,
+                Some(_) => { input.next(); }
+                None => return Err(E::unexpect(None, input))
+            }
+        }
+        Ok((src.diff(&input), input))
+    }
+}
+
 /// Apply `parser` zero or more times, the results in a [`Vec`].
 /// # Example
 /// ```
@@ -107,12 +209,16 @@ where
 pub fn many<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
     I: Input,
+    E: ParseError<I>,
     P: Parser<I, E>,
 {
-    move |input: I| {
-        let mut it = parser.parse_iter(input);
-        let result = it.collect();
-        Ok((result, it.get()))
+    move |mut input: I| {
+        let mut result = vec![];
+        while let Ok((o, i)) = parser.parse(input.clone()) {
+            result.push(o);
+            input = i;
+        }
+        Ok((result, input))
     }
 }
 
@@ -136,11 +242,13 @@ where
     P: Parser<I, E>
 {
     move |input: I| {
-        let (o, i) = parser.parse(input)?;
+        let (o, mut input) = parser.parse(input)?;
         let mut result = vec![o];
-        let mut it = parser.parse_iter(i);
-        it.for_each(|o| result.push(o));
-        Ok((result, it.get()))
+        while let Ok((o, i)) = parser.parse(input.clone()) {
+            result.push(o);
+            input = i;
+        }
+        Ok((result, input))
     }
 }
 
@@ -161,24 +269,28 @@ where
 /// assert_eq!(parser("acb"), Err(SimpleError::Unexpected(Some('c'))));
 /// assert_eq!(parser("aa"), Err(SimpleError::Unexpected(None)));
 /// ```
-pub fn many_till<I, E, A, B>(mut parser: A, mut pred: B) -> impl FnMut(I) -> ParseResult<Vec<A::Output>, I, E>  
+pub fn many_till<P, F, I, E>(mut parser: P, mut f: F) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>  
 where
     I: Input,
     E: ParseError<I>,
-    A: Parser<I, E>,
-    B: Parser<I, E>,
+    P: Parser<I, E>,
+    F: Parser<I, E>,
 {
     move |mut input: I| {
         let mut result = vec![];
-
-        while let Err(_) = pred.parse(input.clone()) {
+        while let Err(_) = f.parse(input.clone()) {
             let (o, i) = parser.parse(input)?;
             result.push(o);
             input = i;
         }
-
         Ok((result, input))
     }
+}
+
+#[test]
+fn test() {
+    let r: ParseResult<Vec<char>, &str> = many_till(super::char::char('a'), super::char::char('b'))("b");
+    println!("{:?}", r)
 }
 
 /// Apply `parser` specify `n` times, the results in a [`Vec`].
@@ -201,10 +313,14 @@ where
     I: Input,
     P: Parser<I, E>
 {
-    move |input: I| {
-        let mut it = parser.parse_iter(input);
-        let result = it.take(n).collect();
-        Ok((result, it.try_get()?))
+    move |mut input: I| {
+        let mut result = vec![];
+        for _  in 0..n {
+            let (o, i) = parser.parse(input)?;
+            result.push(o);
+            input = i;
+        }
+        Ok((result, input))
     }
 }
 
@@ -227,10 +343,11 @@ where
     I: Input,
     P: Parser<I, E>
 {
-    move |input: I| {
-        let mut it = parser.parse_iter(input);
-        it.for_each(|_| ());
-        Ok(((), it.get()))
+    move |mut input: I| {
+        while let Ok((_, i)) = parser.parse(input.clone()) {
+            input = i;
+        }
+        Ok(((), input))
     }
 }
 
@@ -254,10 +371,11 @@ where
     P: Parser<I, E>
 {
     move |input: I| {
-        let (_, i) = parser.parse(input)?;
-        let mut it = parser.parse_iter(i);
-        it.for_each(|_| ());
-        Ok(((), it.get()))
+        let (_, mut input) = parser.parse(input)?;
+        while let Ok((_, i)) = parser.parse(input.clone()) {
+            input = i;
+        }
+        Ok(((), input))
     }
 }
 
@@ -289,7 +407,6 @@ where
             let (_, i) = parser.parse(input)?;
             input = i;
         }
-
         Ok(((), input))
     }
 }
@@ -314,13 +431,14 @@ where
     I: Input,
     P: Parser<I, E>
 {
-    move |input: I| {
-        let mut it = parser.parse_iter(input);
-        it.take(n).for_each(|_| ());
-        Ok(((), it.try_get()?))
+    move |mut input: I| {
+        for _  in 0..n {
+            let (_, i) = parser.parse(input)?;
+            input = i;
+        }
+        Ok(((), input))
     }
 }
-
 
 /// Apply `parser` zero or more times, separated by parser `sep`, the results in a [`Vec`].
 /// # Example
@@ -344,14 +462,16 @@ where
     S: Parser<I, E>
 {
     move |input: I| {
-        let (mut os, i) = match parser.parse(input.clone()) {
+        let (mut result, mut input) = match parser.parse(input.clone()) {
             Ok((o, i)) => (vec![o], i),
             Err(_) => return Ok((vec![], input))
         };
-        let mut parser = sep.ref_mut().andr(parser.ref_mut());
-        let mut it = parser.parse_iter(i);
-        it.for_each(|o| os.push(o));
-        Ok((os, it.get()))
+        while let Ok((_, i)) = sep.parse(input.clone()) {
+            let (o, i) = parser.parse(i)?;
+            result.push(o);
+            input = i;
+        }
+        Ok((result, input))
     }
 }
 
@@ -377,12 +497,14 @@ where
     S: Parser<I, E>
 {
     move |input: I| {
-        let (o, i) = parser.parse(input)?;
-        let mut os = vec![o];
-        let mut parser = sep.ref_mut().andr(parser.ref_mut());
-        let mut it = parser.parse_iter(i);
-        it.for_each(|o| os.push(o));
-        Ok((os, it.get()))
+        let (o, mut input) = parser.parse(input)?;
+        let mut result = vec![o];
+        while let Ok((_, i)) = sep.parse(input.clone()) {
+            let (o, i) = parser.parse(i)?;
+            result.push(o);
+            input = i;
+        }
+        Ok((result, input))
     }
 }
 
@@ -408,14 +530,19 @@ where
     S: Parser<I, E>
 {
     move |input: I| { 
-        let (mut os, i) = match parser.ref_mut().andl(sep.ref_mut()).parse(input.clone()) {
-            Ok((o, i)) => (vec![o], i),
+        let mut result = vec![];
+        let (o, i) = match parser.parse(input.clone()) {
+            Ok((o, i)) => (o, i),
             Err(_) => return Ok((vec![], input))
         };
-        let mut parser = parser.ref_mut().andl(sep.ref_mut());
-        let mut it = parser.parse_iter(i);
-        it.for_each(|o| os.push(o));
-        Ok((os, it.get()))
+        let (_, mut input) = sep.parse(i)?;
+        result.push(o);
+        while let Ok((o, i)) = parser.parse(input.clone()) {
+            let (_, i) = sep.parse(i)?;
+            result.push(o);
+            input = i;            
+        }
+        Ok((result, input))
     }
 }
 
@@ -442,12 +569,16 @@ where
     S: Parser<I, E>
 {
     move |input: I| { 
-        let (o, i) = parser.ref_mut().andl(sep.ref_mut()).parse(input.clone())?;
-        let mut os = vec![o];
-        let mut parser = parser.ref_mut().andl(sep.ref_mut());
-        let mut it = parser.parse_iter(i);
-        it.for_each(|o| os.push(o));
-        Ok((os, it.get()))
+        let mut result = vec![];
+        let (o, i) = parser.parse(input)?;
+        let (_, mut input) = sep.parse(i)?;
+        result.push(o);
+        while let Ok((o, i)) = parser.parse(input.clone()) {
+            let (_, i) = sep.parse(i)?;
+            result.push(o);
+            input = i;            
+        }
+        Ok((result, input))
     }
 }
 
@@ -547,14 +678,14 @@ where
 /// assert_eq!(parser("cbc"), Ok((None, "cbc")));
 /// assert_eq!(parser("acb"), Err(SimpleError::Unexpected(Some('c'))));
 /// ```
-pub fn cond<I, E, C, P>(mut cond: C, mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, E> 
+pub fn cond<F, P, I, E>(mut f: F, mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, E> 
 where
     I: Input,
-    C: Parser<I, E>,
+    F: Parser<I, E>,
     P: Parser<I, E>
 {
     move |input: I| {
-        match cond.parse(input.clone()) {
+        match f.parse(input.clone()) {
             Ok((_, i)) => match parser.parse(i) {
                 Ok((o, i)) => Ok((Some(o), i)),
                 Err(e) => Err(e)

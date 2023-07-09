@@ -19,19 +19,21 @@ use crate::{
         sep_by1,
         recognize,
         opt,
-        alt
+        alt, take_while
     }, 
 }; 
 
-pub fn token<I, E, P>(parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
+pub fn token<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
 where
     I: Input,
     I::Token: AsChar,
+    E: ParseError<I>,
     P: Parser<I, E>,
-    E: ParseError<I>
 {
-    let mut parser = skip_many(space).andr(parser);
-    move |input: I| parser.parse(input)
+    move |input: I| {
+        let (_, i) = take_while(|t: &I::Token| t.as_char().is_whitespace())(input)?;
+        parser.parse(i)
+    }
 }
 
 pub fn parens<I, E, P>(parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E>

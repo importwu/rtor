@@ -12,7 +12,6 @@ pub trait Parser<I, E> {
 
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E>;
 
-    #[inline]
     fn parse_iter(&mut self, input: I) -> ParseIter<'_, Self, I, E> where Self: Sized {
         ParseIter { 
             parser: self, 
@@ -21,7 +20,6 @@ pub trait Parser<I, E> {
         }
     }
 
-    #[inline]
     fn map<R, F>(self, f: F) -> Map<Self, F>
     where 
         Self: Sized,
@@ -30,7 +28,6 @@ pub trait Parser<I, E> {
         Map { parser: self, f }
     }
 
-    #[inline]
     fn map_err<R, F>(self, f: F) -> MapErr<Self, F, E> 
     where
         Self: Sized,
@@ -39,7 +36,6 @@ pub trait Parser<I, E> {
         MapErr { parser: self, f, marker: PhantomData }
     }
 
-    #[inline]
     fn or<P>(self, second: P) -> Or<Self, P> 
     where 
         Self: Sized,
@@ -48,7 +44,6 @@ pub trait Parser<I, E> {
         Or { first: self, second }
     }
 
-    #[inline]
     fn andl<P>(self, second: P) -> Andl<Self, P> 
     where
         Self: Sized, 
@@ -57,7 +52,6 @@ pub trait Parser<I, E> {
         Andl { first: self, second }
     }
 
-    #[inline]
     fn andr<P>(self, second: P) -> Andr<Self, P> 
     where 
         Self: Sized,
@@ -66,7 +60,6 @@ pub trait Parser<I, E> {
         Andr { first: self, second }
     }
 
-    #[inline]
     fn and<P>(self, second: P) -> And<Self, P> 
     where 
         Self: Sized,
@@ -75,7 +68,6 @@ pub trait Parser<I, E> {
         And { first: self, second }
     }
 
-    #[inline]
     fn and_then<P, F>(self, f: F) -> AndThen<Self, F> 
     where
         Self: Sized,
@@ -85,7 +77,6 @@ pub trait Parser<I, E> {
         AndThen { parser: self, f }
     }
 
-    #[inline]
     fn chainl<P>(self, op: P, value: Self::Output) -> Chainl<Self, P, Self::Output> 
     where 
         Self: Sized,
@@ -95,7 +86,6 @@ pub trait Parser<I, E> {
         Chainl { parser: self, op, value }
     }
 
-    #[inline]
     fn chainl1<P>(self, op: P) -> Chainl1<Self, P> 
     where
         Self: Sized,
@@ -104,7 +94,6 @@ pub trait Parser<I, E> {
         Chainl1 { parser: self, op }
     }
 
-    #[inline]
     fn chainr<P>(self, op: P, value: Self::Output) -> Chainr<Self, P, Self::Output> 
     where 
         Self: Sized, 
@@ -114,7 +103,6 @@ pub trait Parser<I, E> {
         Chainr { parser: self, op, value }
     }
 
-    #[inline]
     fn chainr1<P>(self, op: P) -> Chainr1<Self, P> 
     where 
         Self: Sized,
@@ -123,17 +111,14 @@ pub trait Parser<I, E> {
         Chainr1 { parser: self, op }
     }
     
-    #[inline]
     fn ignore(self) -> Ignore<Self> where Self: Sized {
         Ignore { parser: self }
     }
 
-    #[inline]
     fn ref_mut(&mut self) -> RefMut<Self> where Self: Sized {
         RefMut { parser: self }
     }
 
-    #[inline]
     fn expect(self, message: &str) -> Expect<Self> where Self: Sized {
         Expect { parser: self, message: message.to_owned() }
     }
@@ -345,7 +330,6 @@ pub struct Ignore<P> {
 impl<P, I, E> Parser<I, E> for Ignore<P> where P: Parser<I, E> {
     type Output = ();
     
-    #[inline]
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         match self.parser.parse(input) {
             Ok((_, i)) => Ok(((), i)),
@@ -361,7 +345,6 @@ pub struct RefMut<'a, P> {
 impl<P, I, E> Parser<I, E> for RefMut<'_, P> where P: Parser<I, E> {
     type Output = P::Output;
     
-    #[inline]
     fn parse(&mut self, input: I) -> ParseResult<Self::Output, I, E> {
         self.parser.parse(input)
     }

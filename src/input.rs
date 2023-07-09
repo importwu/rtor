@@ -11,6 +11,7 @@ pub trait Input: Clone {
     fn diff(&self, other: &Self) -> Self;
 
     fn as_buf(&self) -> &Self::Buffer;
+
 }
 
 impl<'a> Input for &'a str {
