@@ -1,11 +1,10 @@
 use crate::{
+    Parser,
     Input, 
-    Parser, 
-    ParseError, 
     ParseResult,
+    ParseError, 
     Alt
 };
-
 
 /// Apply `parser`, if fails, returns [`None`] without cosuming input, otherwise 
 /// returns [`Some`] the value returned by `parser`.

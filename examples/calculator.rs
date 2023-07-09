@@ -2,7 +2,7 @@ use rtor::{
     ParseResult,
     Parser,
     token::{
-        symbol,
+        token,
         number,
         parens
     },
@@ -11,7 +11,7 @@ use rtor::{
 };
 
 fn main() {
-    let v = symbol(expr).map(|e| e.eval()).parse("1 + 2 * ( 3 + 4 ) + 5 * 6");
+    let v = token(expr).map(|e| e.eval()).parse("1 + 2 * ( 3 + 4 ) + 5 * 6");
     assert_eq!(v, Ok((45.0, "")));
 }
 
@@ -42,15 +42,15 @@ impl Expr {
 
 fn expr(input: &str) -> ParseResult<Expr, &str> {
     let atom = number.map(|i: &str| Expr::Value(i.parse::<f64>().unwrap()))
-        .or(parens(symbol(expr)));
+        .or(parens(token(expr)));
 
-    symbol(atom)
+    token(atom)
         .chainl1(|i| {
-            let (op, i) = symbol(alt((char('*'), char('/'))))(i)?;
+            let (op, i) = token(alt((char('*'), char('/'))))(i)?;
             Ok((move |l: Expr, r: Expr| Expr::Binary { op, left: Box::new(l), right: Box::new(r) }, i))
         })
         .chainl1(|i| {
-            let (op, i) = symbol(alt((char('+'), char('-'))))(i)?;
+            let (op, i) = token(alt((char('+'), char('-'))))(i)?;
             Ok((move |l: Expr, r: Expr| Expr::Binary { op, left: Box::new(l), right: Box::new(r) }, i))
         })
         .parse(input)
