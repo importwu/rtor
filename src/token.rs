@@ -23,7 +23,7 @@ use crate::{
     }, 
 }; 
 
-pub fn symbol<I, E, P>(parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
+pub fn token<I, E, P>(parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
 where
     I: Input,
     I::Token: AsChar,
@@ -41,7 +41,7 @@ where
     P: Parser<I, E>,
     E: ParseError<I>
 {
-    let mut parser = between(char('('), parser, symbol(char(')')));
+    let mut parser = between(token(char('(')), parser, token(char(')')));
     move |input: I| parser.parse(input)
 }
 
@@ -52,7 +52,7 @@ where
     P: Parser<I, E>,
     E: ParseError<I>
 {
-    let mut parser = between(char('{'), parser, symbol(char('}')));
+    let mut parser = between(token(char('{')), parser, token(char('}')));
     move |input: I| parser.parse(input)
 }
 
@@ -63,7 +63,7 @@ where
     P: Parser<I, E>,
     E: ParseError<I>
 {
-    let mut parser = between(char('<'), parser, symbol(char('>')));
+    let mut parser = between(token(char('<')), parser, token(char('>')));
     move |input: I| parser.parse(input)
 }
 
@@ -74,7 +74,7 @@ where
     P: Parser<I, E>,
     E: ParseError<I>
 {
-    let mut parser = between(char('['), parser, symbol(char(']')));
+    let mut parser = between(token(char('[')), parser, token(char(']')));
     move |input: I| parser.parse(input)
 }
 
@@ -85,7 +85,7 @@ where
     P: Parser<I, E>,
     E: ParseError<I>
 {
-    let mut parser = sep_by(parser, symbol(char(',')));
+    let mut parser = sep_by(parser, token(char(',')));
     move |input: I| parser.parse(input)
 }
 
@@ -96,7 +96,7 @@ where
     P: Parser<I, E>,
     E: ParseError<I>
 {
-    let mut parser = sep_by1(parser, symbol(char(',')));
+    let mut parser = sep_by1(parser, token(char(',')));
     move |input: I| parser.parse(input)
 }
 
@@ -107,7 +107,7 @@ where
     P: Parser<I, E>,
     E: ParseError<I>
 {
-    let mut parser = sep_by(parser, symbol(char(';')));
+    let mut parser = sep_by(parser, token(char(';')));
     move |input: I| parser.parse(input)
 }
 
@@ -119,7 +119,7 @@ where
     P: Parser<I, E>,
     E: ParseError<I>
 {
-    let mut parser = sep_by1(parser, symbol(char(';')));
+    let mut parser = sep_by1(parser, token(char(';')));
     move |input: I| parser.parse(input)
 }
 

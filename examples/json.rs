@@ -4,7 +4,7 @@ use rtor::{
     Parser, 
     ParseResult,
     token::{
-        symbol,
+        token,
         braces,
         brackets,
         comma_sep,
@@ -52,7 +52,7 @@ fn main() {
     }
     "#;
 
-    let json_value = terminated(symbol(json_value), symbol(eof)).parse(s);
+    let json_value = terminated(token(json_value), token(eof)).parse(s);
     println!("{:#?}", json_value);
 }
 
@@ -69,8 +69,8 @@ enum JsonValue {
 //https://www.json.org/json-en.html
 fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
     alt((
-        braces(comma_sep(pair(symbol(key), symbol(char(':')), symbol(json_value)))).map(|members| JsonValue::Object(HashMap::from_iter(members))),
-        brackets(comma_sep(symbol(json_value))).map(JsonValue::Array),
+        braces(comma_sep(pair(token(key), token(char(':')), token(json_value)))).map(|members| JsonValue::Object(HashMap::from_iter(members))),
+        brackets(comma_sep(token(json_value))).map(JsonValue::Array),
         number.map(|i: &str| JsonValue::Number(i.parse::<f64>().unwrap())),
         key.map(JsonValue::String),
         string("true").map(|_| JsonValue::Boolean(true)),
