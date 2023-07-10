@@ -6,11 +6,11 @@ use crate::{
     Alt
 };
 
-/// Apply `parser`, if fails, returns [`None`] without cosuming input, otherwise 
-/// returns [`Some`] the value returned by `parser`.
+/// Try to apply `parser`, if fails, returns [`None`] without cosuming input, otherwise 
+/// return [`Some`] the value returned by `parser`.
 /// # Example
 /// ```
-/// use rtor::{ParseResult, Parser};
+/// use rtor::{Parser, ParseResult};
 /// use rtor::char::char;
 /// use rtor::combinator::opt;
 /// 
@@ -21,10 +21,11 @@ use crate::{
 /// assert_eq!(parser("abc"), Ok((Some('a'), "bc")));
 /// assert_eq!(parser("bbc"), Ok((None, "bbc")));
 /// ```
-pub fn opt<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, E>
+pub fn opt<P, I, E>(mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, E>
 where
     I: Input,
-    P: Parser<I, E>
+    E: ParseError<I>,
+    P: Parser<I, E>,
 {
     move |input: I| {
         match parser.parse(input.clone()) {
@@ -47,17 +48,18 @@ where
 /// 
 /// assert_eq!(parser("(a)"), Ok(('a', "")));
 /// ```
-pub fn between<I, E, L, P, R>(mut left: L, mut parser: P, mut right: R) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
+pub fn between<I, E, L, P, R>(mut open: L, mut parser: P, mut close: R) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
 where
     I: Input,
+    E: ParseError<I>,
     L: Parser<I, E>,
     P: Parser<I, E>,
     R: Parser<I, E>
 {
     move |input: I| {
-        let (_, i) = left.parse(input)?;
+        let (_, i) = open.parse(input)?;
         let (o, i)= parser.parse(i)?;
-        let (_, i) = right.parse(i)?;
+        let (_, i) = close.parse(i)?;
         Ok((o, i))
     }
 }
