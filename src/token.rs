@@ -7,12 +7,10 @@ use crate::{
     char::{
         char,
         ascii::{
-            space,
             digit,
         },
     },
     combinator::{
-        skip_many,
         skip_many1,
         between,
         sep_by,
