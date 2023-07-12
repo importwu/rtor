@@ -41,10 +41,12 @@ impl Expr {
 }
 
 fn expr(input: &str) -> ParseResult<Expr, &str> {
-    let atom = number.map(|i: &str| Expr::Value(i.parse::<f64>().unwrap()))
-        .or(parens(token(expr)));
+    let atom = token(alt((
+        number.map(|i: &str| Expr::Value(i.parse::<f64>().unwrap())),
+        parens(token(expr))
+    )));
 
-    token(atom)
+    atom
         .chainl1(|i| {
             let (op, i) = token(alt((char('*'), char('/'))))(i)?;
             Ok((move |l: Expr, r: Expr| Expr::Binary { op, left: Box::new(l), right: Box::new(r) }, i))

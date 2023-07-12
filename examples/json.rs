@@ -39,7 +39,7 @@ fn main() {
     }
     "#;
 
-    let result = terminated(json_value, token(eof)).parse(s);
+    let result = terminated(json_value, token(eof))(s);
     println!("{:#?}", result);
 }
 
