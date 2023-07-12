@@ -77,16 +77,16 @@ where
 /// 
 /// assert_eq!(parser("a:b"), Ok((('a', 'b'), "")));
 /// ```
-pub fn pair<I, E, L, P, R>(mut left: L, mut parser: P, mut right: R) ->  impl FnMut(I) -> ParseResult<(L::Output, R::Output), I, E>
+pub fn pair<I, E, L, S, R>(mut left: L, mut sep: S, mut right: R) ->  impl FnMut(I) -> ParseResult<(L::Output, R::Output), I, E>
 where 
     I: Input,
     L: Parser<I, E>,
-    P: Parser<I, E>,
+    S: Parser<I, E>,
     R: Parser<I, E>
 {
     move |input: I| {
         let (o1, i) = left.parse(input)?;
-        let (_, i) = parser.parse(i)?;
+        let (_, i) = sep.parse(i)?;
         let (o2, i) = right.parse(i)?;
         Ok(((o1, o2), i))
     }
@@ -101,9 +101,9 @@ where
     move |mut input: I| {
         let src = input.clone();
         for _ in 0..n {
-            match input.next() {
-                Some(_) => continue,
-                None => return Err(E::unexpect(None, input))
+            match input.peek() {
+                Some(_) => { input.next(); }
+                None => return Err(E::unexpect(input))
             }
         }
         Ok((src.diff(&input), input))
@@ -139,7 +139,7 @@ where
         let src = input.clone();
         match input.peek() {
             Some(t) if f(&t) => { input.next(); }
-            other => return Err(E::unexpect(other, input))
+            _ => return Err(E::unexpect(input))
         }
         while let Some(t) = input.peek() {
             if f(&t) {
@@ -164,7 +164,7 @@ where
             match input.peek() {
                 Some(t) if f(&t) => break,
                 Some(_) => { input.next(); }
-                None => return Err(E::unexpect(None, input))
+                None => return Err(E::unexpect(input))
             }
         }
         Ok((src.diff(&input), input))
@@ -180,14 +180,14 @@ where
     move |mut input: I| {
         let src = input.clone();
         match input.peek() {
-            Some(t) if f(&t) => return Err(E::unexpect(Some(t), input)),
+            Some(t) if f(&t) => return Err(E::unexpect(input)),
             _ => { input.next(); }
         }
         loop {
             match input.peek() {
                 Some(t) if f(&t) => break,
                 Some(_) => { input.next(); }
-                None => return Err(E::unexpect(None, input))
+                None => return Err(E::unexpect(input))
             }
         }
         Ok((src.diff(&input), input))
@@ -287,12 +287,6 @@ where
         }
         Ok((result, input))
     }
-}
-
-#[test]
-fn test() {
-    let r: ParseResult<Vec<char>, &str> = many_till(super::char::char('a'), super::char::char('b'))("b");
-    println!("{:?}", r)
 }
 
 /// Apply `parser` specify `n` times, the results in a [`Vec`].
@@ -397,15 +391,15 @@ where
 /// assert_eq!(parser("acb"), Err(SimpleError::Unexpected(Some('c'))));
 /// assert_eq!(parser("aa"), Err(SimpleError::Unexpected(None)));
 /// ```
-pub fn skip_till<I, E, A, B>(mut parser: A, mut pred: B) -> impl FnMut(I) -> ParseResult<(), I, E> 
+pub fn skip_till<P, F, I, E>(mut parser: P, mut f: F) -> impl FnMut(I) -> ParseResult<(), I, E> 
 where
     I: Input,
     E: ParseError<I>,
-    A: Parser<I, E>,
-    B: Parser<I, E>
+    P: Parser<I, E>,
+    F: Parser<I, E>
 {
     move |mut input: I| {
-        while let Err(_) = pred.parse(input.clone()) {
+        while let Err(_) = f.parse(input.clone()) {
             let (_, i) = parser.parse(input)?;
             input = i;
         }
@@ -657,10 +651,10 @@ where
     E: ParseError<I>,
     P: Parser<I, E>,
 {
-    move |mut input: I| {
+    move |input: I| {
         match parser.parse(input.clone()) {
             Err(_) => Ok(((), input)),
-            Ok(_) => Err(ParseError::unexpect(input.peek(), input))
+            Ok(_) => Err(ParseError::unexpect(input))
         }
     }
 }
@@ -769,7 +763,7 @@ where
 {
     match input.peek() {
         None => Ok(((), input)),
-        Some(t) => Err(ParseError::unexpect(Some(t), input))
+        Some(_) => Err(ParseError::unexpect(input))
     }
 }
 
@@ -794,12 +788,12 @@ where
 /// 
 /// assert_eq!(parser("abc"), Err(SimpleError::Unexpected(Some('a'))));
 /// ```
-pub fn error<I, E>(mut input: I) -> ParseResult<(), I, E> 
+pub fn error<I, E>(input: I) -> ParseResult<(), I, E> 
 where
     I: Input,
     E: ParseError<I>
 {
-    Err(ParseError::unexpect(input.peek(), input))
+    Err(ParseError::unexpect(input))
 }
 
 /// Always succeed without consuming `input`.

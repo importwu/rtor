@@ -2,7 +2,7 @@ use std::{
     str::Chars, 
     slice::Iter, 
     iter::Cloned, 
-    ops::Deref
+    ops::Deref,
 };
 
 use crate::AsChar;
@@ -104,16 +104,28 @@ impl Pos {
 }
 
 #[derive(Debug, Clone)]
-pub struct State<I> {
+pub struct State<I, Data = ()> {
     input: I,
-    pos: Pos
+    pos: Pos,
+    pub data: Data,
 }
 
 impl<I> State<I> {
     pub fn new(input: I) -> Self {
         Self {
             input,
-            pos: Pos::new()
+            pos: Pos::new(),
+            data: ()
+        }
+    }
+}
+
+impl<I, Data> State<I, Data> {
+    pub fn with_data(data: Data, input: I) -> Self {
+        Self {
+            input,
+            pos: Pos::new(),
+            data
         }
     }
 
@@ -122,7 +134,7 @@ impl<I> State<I> {
     }
 }
 
-impl<I> Deref for State<I> {
+impl<I, Data> Deref for State<I, Data> {
     type Target = I;
 
     fn deref(&self) -> &Self::Target {
@@ -130,10 +142,11 @@ impl<I> Deref for State<I> {
     }
 }
 
-impl<I> Input for State<I> 
+impl<I, Data> Input for State<I, Data> 
 where 
     I: Input,
-    I::Token: AsChar
+    I::Token: AsChar,
+    Data: Clone
 {
     type Token = I::Token;
     type Tokens = I::Tokens;
@@ -151,7 +164,8 @@ where
     fn diff(&self, other: &Self) -> Self {
         State { 
             input: self.input.diff(&other.input), 
-            pos: self.pos
+            pos: self.pos,
+            data: self.data.clone()
         }
     }
 

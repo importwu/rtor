@@ -6,9 +6,7 @@ use crate::{
     ParseResult,
     char::{
         char,
-        ascii::{
-            digit,
-        },
+        ascii::digit,
     },
     combinator::{
         skip_many1,

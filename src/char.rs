@@ -62,7 +62,7 @@ where
     move |mut input: I| {
         match input.peek() {
             Some(t) if pred(&t) => {input.next(); return Ok((t, input))},
-            other => Err(ParseError::unexpect(other, input)),
+            _ => Err(ParseError::unexpect(input)),
         }
     }
 }

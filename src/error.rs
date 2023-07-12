@@ -5,8 +5,8 @@ use std::{
 
 use crate::Input;
 
-pub trait ParseError<I: Input> {
-    fn unexpect(token: Option<I::Token>, input: I) -> Self;
+pub trait ParseError<I> {
+    fn unexpect(input: I) -> Self;
     fn expect(message: String, input: I) -> Self;
     fn merge(self, other: Self) -> Self where Self: Sized{
         other
@@ -20,8 +20,8 @@ pub enum SimpleError<T> {
 }
 
 impl<I: Input> ParseError<I> for SimpleError<I::Token> {
-    fn unexpect(token: Option<I::Token>, _: I) -> Self {
-        Self::Unexpected(token)
+    fn unexpect(mut input: I) -> Self {
+        Self::Unexpected(input.next())
     }
 
     fn expect(message: String, _: I) -> Self {
