@@ -26,34 +26,21 @@ use rtor::{
         not,
         alt,
         eof,
-        terminated
+        terminated,
     }, 
 };
 
 fn main() {
     let s = r#"
     {
-        "ulozec": [
-            [
-                [-780982275, true],
-                -1071421524
-            ],
-            {
-                "hyghokilpgf": -694363646.9191926,
-                "ialcqh": 1377465553.898079,
-                "oozscfql": "spWyychnqYA5R"
-            },
-            [1959856920, true, false, "\u1234"],
-            true
-        ],
-        "yvfuqw": "V",
-        "dswcppi": "4I2xOR_q",
-        "ytgqmlpld": "Y7wd"
+        "color": ["red", "green", "blue"],
+        "number": [12e2, 34.5, 45.2e+3],
+        "flag": false
     }
     "#;
 
-    let json_value = terminated(token(json_value), token(eof)).parse(s);
-    println!("{:#?}", json_value);
+    let result = terminated(json_value, token(eof)).parse(s);
+    println!("{:#?}", result);
 }
 
 #[derive(Debug)]
@@ -68,24 +55,24 @@ enum JsonValue {
 
 //https://www.json.org/json-en.html
 fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
-    alt((
-        braces(comma_sep(pair(token(key), token(char(':')), token(json_value)))).map(|members| JsonValue::Object(HashMap::from_iter(members))),
-        brackets(comma_sep(token(json_value))).map(JsonValue::Array),
+    token(alt((
+        braces(comma_sep(pair(key, token(char(':')), json_value))).map(|members| JsonValue::Object(HashMap::from_iter(members))),
+        brackets(comma_sep(json_value)).map(JsonValue::Array),
         number.map(|i: &str| JsonValue::Number(i.parse::<f64>().unwrap())),
         key.map(JsonValue::String),
         string("true").map(|_| JsonValue::Boolean(true)),
         string("false").map(|_| JsonValue::Boolean(false)),
         string("null").map(|_| JsonValue::Null)
-    ))(input)
+    )))(input)
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
     let escape = alt((one_of("\"\\/bfnrt"), char('u').andl(skip(hex, 4))));
     let character = alt((char('\\').andl(escape), not(char('"')).andr(anychar)));
-    between(
+    token(between(
         char('"'), 
         recognize(skip_many(character)).map(|i: &str| i.to_owned()),
         char('"')
-    )(input)
+    ))(input)
 }
 

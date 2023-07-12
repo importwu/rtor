@@ -11,8 +11,8 @@ use rtor::{
 };
 
 fn main() {
-    let v = token(expr).map(|e| e.eval()).parse("1 + 2 * ( 3 + 4 ) + 5 * 6");
-    assert_eq!(v, Ok((45.0, "")));
+    let result = expr.map(|e| e.eval()).parse("1 + 2 * ( 3 + 4 ) + 5 * 6");
+    assert_eq!(result, Ok((45.0, "")));
 }
 
 #[derive(Debug)]

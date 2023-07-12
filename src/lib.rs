@@ -8,7 +8,6 @@ mod input;
 pub use self::{
     error::{
         SimpleError,
-        MultiError,
         ParseError
     },
     parser::Parser,

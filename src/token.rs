@@ -132,5 +132,5 @@ where
     let exponent = (alt((char('e'), char('E'))), opt(alt((char('+'), char('-')))), skip_many1(digit));
     let fraction = (char('.'), skip_many1(digit));
     let integer = skip_many1(digit);
-    recognize((opt(char('-')), integer, opt(fraction), opt(exponent))).parse(input)
+    token(recognize((opt(char('-')), integer, opt(fraction), opt(exponent)))).parse(input)
 }
