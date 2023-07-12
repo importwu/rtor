@@ -27,16 +27,9 @@ impl<I: Input> ParseError<I> for SimpleError<I::Token> {
     fn expect(message: String, _: I) -> Self {
         Self::Expected(message)
     }
-
-    fn merge(self, other: Self) -> Self {
-        other
-    }
 }
 
-impl<T> fmt::Display for SimpleError<T> 
-where
-    T: fmt::Display,
-{
+impl<T> fmt::Display for SimpleError<T> where T: fmt::Display {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
            Self::Unexpected(Some(token)) => write!(f, "unexpected {}", token),
