@@ -6,16 +6,16 @@ use crate::{
     ParseResult,
     char::{
         char,
-        ascii::digit,
+        unicode,
+        ascii
     },
     combinator::{
-        skip_many1,
         between,
         sep_by,
         sep_by1,
         recognize,
         opt,
-        alt, take_while
+        alt, 
     }, 
 }; 
 
@@ -27,7 +27,7 @@ where
     P: Parser<I, E>,
 {
     move |input: I| {
-        let (_, i) = take_while(|t: &I::Token| t.as_char().is_whitespace())(input)?;
+        let (_, i) = unicode::multi_space(input)?;
         parser.parse(i)
     }
 }
@@ -127,8 +127,7 @@ where
     I::Token: AsChar,
     E: ParseError<I>
 {
-    let exponent = (alt((char('e'), char('E'))), opt(alt((char('+'), char('-')))), skip_many1(digit));
-    let fraction = (char('.'), skip_many1(digit));
-    let integer = skip_many1(digit);
-    token(recognize((opt(char('-')), integer, opt(fraction), opt(exponent)))).parse(input)
+    let exponent = (alt((char('e'), char('E'))), opt(alt((char('+'), char('-')))), ascii::multi_digit1);
+    let fraction = (char('.'), ascii::multi_digit1);
+    token(recognize((opt(char('-')), ascii::multi_digit1, opt(fraction), opt(exponent))))(input)
 }

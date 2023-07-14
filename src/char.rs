@@ -4,7 +4,11 @@ use crate::{
     AsChar,
     FindToken, 
     ParseResult, 
-    ParseError
+    ParseError,
+    combinator::{
+        take_while,
+        take_while1
+    }
 };
 
 pub fn char<I, E>(ch: char) -> impl FnMut(I) -> ParseResult<I::Token, I, E>
@@ -133,7 +137,6 @@ where
 }
 
 pub mod ascii {
-
     use super::*;
 
     pub fn digit<I, E>(input: I) -> ParseResult<I::Token, I, E>
@@ -145,6 +148,24 @@ pub mod ascii {
         sat(|c: &I::Token| c.as_char().is_ascii_digit())(input)
     }
 
+    pub fn multi_digit<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_ascii_digit())(input)
+    }
+
+    pub fn multi_digit1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_ascii_digit())(input)
+    }
+
     pub fn alpha<I, E>(input: I) -> ParseResult<I::Token, I, E>
     where
         I: Input,
@@ -152,6 +173,24 @@ pub mod ascii {
         E: ParseError<I>
     {
         sat(|c: &I::Token| c.as_char().is_ascii_alphabetic())(input)
+    }
+
+    pub fn multi_alpha<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_ascii_alphabetic())(input)
+    }
+
+    pub fn multi_alpha1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_ascii_alphabetic())(input)
     }
 
     pub fn lowercase<I, E>(input: I) -> ParseResult<I::Token, I, E> 
@@ -163,6 +202,24 @@ pub mod ascii {
         sat(|c: &I::Token| c.as_char().is_ascii_lowercase())(input)
     }
 
+    pub fn multi_lowercase<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_ascii_lowercase())(input)
+    }
+
+    pub fn multi_lowercase1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_ascii_lowercase())(input)
+    }
+
     pub fn uppercase<I, E>(input: I) -> ParseResult<I::Token, I, E>   
     where
         I: Input,
@@ -170,6 +227,24 @@ pub mod ascii {
         E: ParseError<I>
     {
         sat(|c: &I::Token| c.as_char().is_ascii_uppercase())(input)
+    }
+
+    pub fn multi_uppercase<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_ascii_uppercase())(input)
+    }
+
+    pub fn multi_uppercase1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_ascii_uppercase())(input)
     }
 
     pub fn alphanum<I, E>(input: I) -> ParseResult<I::Token, I, E>   
@@ -181,6 +256,25 @@ pub mod ascii {
         sat(|c: &I::Token| c.as_char().is_ascii_alphanumeric())(input)
     }
 
+    
+    pub fn multi_alphanum<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_ascii_alphanumeric())(input)
+    }
+
+    pub fn multi_alphanum1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_ascii_alphanumeric())(input)
+    }
+
     pub fn space<I, E>(input: I) -> ParseResult<I::Token, I, E>   
     where
         I: Input,
@@ -190,6 +284,24 @@ pub mod ascii {
         sat(|c: &I::Token| c.as_char().is_ascii_whitespace())(input)
     }
 
+    pub fn multi_space<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_ascii_whitespace())(input)
+    }
+
+    pub fn multi_space1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_ascii_whitespace())(input)
+    }
+
     pub fn hex<I, E>(input: I) -> ParseResult<I::Token, I, E> 
     where
         I: Input,
@@ -197,6 +309,24 @@ pub mod ascii {
         E: ParseError<I>
     {
         sat(|c: &I::Token| c.as_char().is_ascii_hexdigit())(input)
+    }
+
+    pub fn multi_hex<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_ascii_hexdigit())(input)
+    }
+
+    pub fn multi_hex1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_ascii_hexdigit())(input)
     }
 }
 
@@ -212,6 +342,24 @@ pub mod unicode {
         sat(|c: &I::Token| c.as_char().is_alphanumeric())(input)
     }
 
+    pub fn multi_alphanum<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_alphanumeric())(input)
+    }
+
+    pub fn multi_alphanum1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_alphanumeric())(input)
+    }
+
     pub fn alpha<I, E>(input: I) -> ParseResult<I::Token, I, E> 
     where
         I: Input,
@@ -221,6 +369,25 @@ pub mod unicode {
         sat(|c: &I::Token| c.as_char().is_alphabetic())(input)
     }
 
+    pub fn multi_alpha<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_alphabetic())(input)
+    }
+
+    pub fn multi_alpha1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_alphabetic())(input)
+    }
+
+
     pub fn lowercase<I, E>(input: I) -> ParseResult<I::Token, I, E> 
     where
         I: Input,
@@ -228,6 +395,24 @@ pub mod unicode {
         E: ParseError<I>
     {
         sat(|c: &I::Token| c.as_char().is_lowercase())(input)
+    }
+
+    pub fn multi_lowercase<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_lowercase())(input)
+    }
+
+    pub fn multi_lowercase1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_lowercase())(input)
     }
 
     pub fn uppercase<I, E>(input: I) -> ParseResult<I::Token, I, E> 
@@ -239,6 +424,24 @@ pub mod unicode {
         sat(|c: &I::Token| c.as_char().is_uppercase())(input)
     }
 
+    pub fn multi_uppercase<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_uppercase())(input)
+    }
+
+    pub fn multi_uppercase1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_uppercase())(input)
+    }
+
     pub fn space<I, E>(input: I) -> ParseResult<I::Token, I, E> 
     where
         I: Input,
@@ -246,5 +449,23 @@ pub mod unicode {
         E: ParseError<I>
     {
         sat(|c: &I::Token| c.as_char().is_whitespace())(input)
+    }
+
+    pub fn multi_space<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while(|t: &I::Token| t.as_char().is_whitespace())(input)
+    }
+
+    pub fn multi_space1<I, E>(input: I) -> ParseResult<I, I, E>
+    where
+        I: Input,
+        I::Token: AsChar,
+        E: ParseError<I>
+    {
+        take_while1(|t: &I::Token| t.as_char().is_whitespace())(input)
     }
 }

@@ -7,11 +7,15 @@ use rtor::{
         parens
     },
     char::char, 
-    combinator::alt
+    combinator::{
+        alt,
+        terminated,
+        eof
+    }
 };
 
 fn main() {
-    let result = expr.map(|e| e.eval()).parse("1 + 2 * ( 3 + 4 ) + 5 * 6");
+    let result = terminated(expr.map(|e| e.eval()), token(eof))("1 + 2 * ( 3 + 4 ) + 5 * 6");
     assert_eq!(result, Ok((45.0, "")));
 }
 
