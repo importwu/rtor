@@ -51,11 +51,6 @@ impl Expr {
 }
 
 fn expr(input: &str) -> ParseResult<Expr, &str> {
-    let atom = token(alt((
-        number.map(Expr::Value),
-        parens(token(expr))
-    )));
-
     let atom = preceded(
         unicode::multi_space, 
         alt((
