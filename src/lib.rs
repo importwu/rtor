@@ -2,7 +2,6 @@ mod parser;
 mod error;
 pub mod char;
 pub mod combinator;
-pub mod token;
 mod input;
 
 pub use self::{

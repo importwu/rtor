@@ -32,7 +32,7 @@ fn main() {
     let s = r#"
     {
         "color": ["red", "green", "blue"],
-        "number": [12e2, 34.5, 45.2e+3],
+        "number": [12e2, 34.5, 45.2e+3 ],
         "flag": false
     }
     "#;
@@ -70,7 +70,7 @@ fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
             between(
                 char('['),
                 sep_by(json_value, preceded(unicode::multi_space, char(','))),
-                char(']')
+                preceded(unicode::multi_space, char(']'))
             ).map(JsonValue::Array),
             number.map(JsonValue::Number),
             key.map(JsonValue::String),
