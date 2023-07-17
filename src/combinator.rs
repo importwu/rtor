@@ -821,6 +821,19 @@ where
     move|input: I| Ok((t.clone(), input))
 }
 
+pub fn value<T, P, I, E>(v: T, mut parser: P) -> impl FnMut(I) -> ParseResult<T, I, E> 
+where
+    I: Input,
+    E: ParseError<I>,
+    P: Parser<I, E>,
+    T: Clone,
+{
+    move |input: I| {
+        let (_, i) = parser.parse(input)?;
+        Ok((v.clone(), i))
+    }
+}
+
 pub fn alt<I, E, List>(mut list: List) -> impl FnMut(I) -> ParseResult<List::Output, I, E> 
 where 
     I: Input,

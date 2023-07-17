@@ -3,30 +3,28 @@ use std::collections::HashMap;
 use rtor::{
     Parser, 
     ParseResult,
-    token::{
-        token,
-        braces,
-        brackets,
-        comma_sep,
-        number
-    },
     char::{
         one_of,
         ascii, 
+        unicode,
         anychar,
         char,
-        string
+        string,
     }, 
     combinator::{
         between, 
-        pair, 
-        skip, 
         skip_many, 
+        skip, 
         recognize, 
+        terminated, 
+        preceded,
+        value,
+        pair, 
+        sep_by,
         not,
         alt,
         eof,
-        terminated,
+        opt,
     }, 
 };
 
@@ -39,11 +37,14 @@ fn main() {
     }
     "#;
 
-    let result = terminated(json_value, token(eof))(s);
+    let result = terminated(
+        json_value, 
+        preceded(unicode::multi_space, eof)
+    )(s);
     println!("{:#?}", result);
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum JsonValue {
     Object(HashMap<String, JsonValue>),
     Array(Vec<JsonValue>),
@@ -55,24 +56,45 @@ enum JsonValue {
 
 //https://www.json.org/json-en.html
 fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
-    token(alt((
-        braces(comma_sep(pair(key, token(char(':')), json_value))).map(|members| JsonValue::Object(HashMap::from_iter(members))),
-        brackets(comma_sep(json_value)).map(JsonValue::Array),
-        number.map(|i: &str| JsonValue::Number(i.parse::<f64>().unwrap())),
-        key.map(JsonValue::String),
-        string("true").map(|_| JsonValue::Boolean(true)),
-        string("false").map(|_| JsonValue::Boolean(false)),
-        string("null").map(|_| JsonValue::Null)
-    )))(input)
+    preceded(
+        unicode::multi_space, 
+        alt((
+            between(
+                char('{'), 
+                sep_by(
+                    pair(preceded(unicode::multi_space, key), preceded(unicode::multi_space, char(':')), json_value), 
+                    preceded(unicode::multi_space, char(','))
+                ),
+                preceded(unicode::multi_space, char('}'))
+            ).map(|members| JsonValue::Object(HashMap::from_iter(members))),
+            between(
+                char('['),
+                sep_by(json_value, preceded(unicode::multi_space, char(','))),
+                char(']')
+            ).map(JsonValue::Array),
+            number.map(JsonValue::Number),
+            key.map(JsonValue::String),
+            value(JsonValue::Boolean(true), string("true")),
+            value(JsonValue::Boolean(false), string("false")),
+            value(JsonValue::Null, string("null")),
+        ))
+    )(input)
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
     let escape = alt((one_of("\"\\/bfnrt"), char('u').andl(skip(ascii::hex, 4))));
     let character = alt((char('\\').andl(escape), not(char('"')).andr(anychar)));
-    token(between(
+    between(
         char('"'), 
         recognize(skip_many(character)).map(|i: &str| i.to_owned()),
         char('"')
-    ))(input)
+    )(input)
 }
 
+pub fn number(input: &str) -> ParseResult<f64, &str> {
+    let exponent = (alt((char('e'), char('E'))), opt(alt((char('+'), char('-')))), ascii::multi_digit1);
+    let fraction = (char('.'), ascii::multi_digit1);
+    recognize((opt(char('-')), ascii::multi_digit1, opt(fraction), opt(exponent)))
+        .map(|i: &str| i.parse().unwrap())
+        .parse(input)
+}
