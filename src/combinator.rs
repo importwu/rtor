@@ -834,6 +834,24 @@ where
     }
 }
 
+pub fn verify<P, F, I, E>(mut parser: P, f: F) -> impl FnMut (I) -> ParseResult<P::Output, I, E> 
+where
+    I: Input,
+    E: ParseError<I>,
+    P: Parser<I, E>,
+    F: Fn(&P::Output) -> bool
+{
+    move |input| {
+        let src = input.clone();
+        let (o, i) = parser.parse(input)?;
+        if f(&o) {
+            Ok((o, i))
+        }else {
+            Err(ParseError::unexpect(src))
+        }
+    }
+}
+
 pub fn alt<I, E, List>(mut list: List) -> impl FnMut(I) -> ParseResult<List::Output, I, E> 
 where 
     I: Input,
