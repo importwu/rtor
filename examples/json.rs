@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use rtor::{
     Parser, 
+    Input,
     ParseResult,
     char::{
         one_of,
@@ -25,22 +26,19 @@ use rtor::{
         alt,
         eof,
         opt,
-    }, 
+    }, ParseError, AsChar, 
 };
 
 fn main() {
     let s = r#"
     {
-        "color": ["red", "green", "blue"],
-        "number": [12e2, 34.5, 45.2e+3 ],
+        "color": [ "red", "green", "blue" ],
+        "number": [ 12e2, 34.5, 45.2e+3 ],
         "flag": false
     }
     "#;
 
-    let result = terminated(
-        json_value, 
-        preceded(unicode::multi_space, eof)
-    )(s);
+    let result = parse_json(s);
     println!("{:#?}", result);
 }
 
@@ -54,31 +52,40 @@ enum JsonValue {
     Null
 }
 
+fn parse_json(input: &str) -> ParseResult<JsonValue, &str> {
+    between(
+        unicode::multi_space, 
+        json_value,
+        eof
+    )(input)
+}
+
 //https://www.json.org/json-en.html
 fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
-    preceded(
-        unicode::multi_space, 
-        alt((
-            between(
-                char('{'), 
-                sep_by(
-                    pair(preceded(unicode::multi_space, key), preceded(unicode::multi_space, char(':')), json_value), 
-                    preceded(unicode::multi_space, char(','))
-                ),
-                preceded(unicode::multi_space, char('}'))
-            ).map(|members| JsonValue::Object(HashMap::from_iter(members))),
-            between(
-                char('['),
-                sep_by(json_value, preceded(unicode::multi_space, char(','))),
-                preceded(unicode::multi_space, char(']'))
-            ).map(JsonValue::Array),
-            number.map(JsonValue::Number),
-            key.map(JsonValue::String),
-            value(JsonValue::Boolean(true), string("true")),
-            value(JsonValue::Boolean(false), string("false")),
-            value(JsonValue::Null, string("null")),
-        ))
-    )(input)
+    lexeme(alt((
+        between(
+            lexeme(char('{')), 
+            sep_by(
+                pair(
+                        lexeme(key), 
+                        lexeme(char(':')), 
+                        json_value), 
+                lexeme(char(','))),
+            lexeme(char('}'))
+        ).map(|members| JsonValue::Object(HashMap::from_iter(members))),
+        between(
+            lexeme(char('[')),
+            sep_by(
+                    json_value, 
+                    lexeme(char(','))),
+            lexeme(char(']'))
+        ).map(JsonValue::Array),
+        number.map(JsonValue::Number),
+        key.map(JsonValue::String),
+        value(JsonValue::Boolean(true), string("true")),
+        value(JsonValue::Boolean(false), string("false")),
+        value(JsonValue::Null, string("null")),
+    )))(input)
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
@@ -97,4 +104,15 @@ pub fn number(input: &str) -> ParseResult<f64, &str> {
     recognize((opt(char('-')), ascii::multi_digit1, opt(fraction), opt(exponent)))
         .map(|i: &str| i.parse().unwrap())
         .parse(input)
+}
+
+pub fn lexeme<P, I, E>(parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E> 
+where
+    I: Input,
+    I::Token: AsChar,
+    E: ParseError<I>,
+    P: Parser<I, E>,
+{
+    let mut parser = terminated(parser, unicode::multi_space);
+    move |input| parser(input)
 }
