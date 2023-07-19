@@ -155,8 +155,8 @@ impl<P, I, E> ParseIter<'_, P, I, E> {
 
 impl<P, I, E> Iterator for &mut ParseIter<'_, P, I, E> 
 where
+    I: Clone,
     P: Parser<I, E>,
-    I: Input
 {
     type Item = P::Output;
 
@@ -225,10 +225,10 @@ pub struct Or<A, B> {
 
 impl<A, B, I, E> Parser<I, E> for Or<A, B> 
 where
+    I: Clone, 
+    E: ParseError<I>,
     A: Parser<I, E>,
     B: Parser<I, E, Output = A::Output>,
-    I: Input, 
-    E: ParseError<I>
 {
     type Output = A::Output;
 
@@ -358,9 +358,9 @@ pub struct Expect<P> {
 
 impl<P, I, E> Parser<I, E> for Expect<P> 
 where
+    I: Clone,
+    E: ParseError<I>,
     P: Parser<I, E>,
-    I: Input,
-    E: ParseError<I>
 {
     type Output = P::Output;
 
@@ -381,7 +381,7 @@ pub struct Chainl<A, B, V> {
 
 impl<I, E, A, B, F> Parser<I, E> for Chainl<A, B, A::Output> 
 where
-    I: Input,
+    I: Clone,
     A: Parser<I, E>,
     A::Output: Clone,
     B: Parser<I, E, Output = F>,
@@ -411,7 +411,7 @@ pub struct Chainl1<A, B> {
 
 impl<A, B, I, E, F> Parser<I, E> for Chainl1<A, B> 
 where
-    I: Input,
+    I: Clone,
     A: Parser<I, E>,
     B: Parser<I, E, Output = F>,
     F: Fn(A::Output, A::Output) -> A::Output
@@ -438,7 +438,7 @@ pub struct Chainr<A, B, V> {
 
 impl<I, E, A, B, F> Parser<I, E> for Chainr<A, B, A::Output> 
 where
-    I: Input,
+    I: Clone,
     A: Parser<I, E>,
     A::Output: Clone,
     B: Parser<I, E, Output = F>,
@@ -468,7 +468,7 @@ pub struct Chainr1<A, B> {
 
 impl<I, E, A, B, F> Parser<I, E> for Chainr1<A, B> 
 where
-    I: Input,
+    I: Clone,
     A: Parser<I, E>,
     B: Parser<I, E, Output = F>,
     F: Fn(A::Output, A::Output) -> A::Output

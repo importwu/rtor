@@ -24,8 +24,7 @@ use crate::{
 /// ```
 pub fn opt<P, I, E>(mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, E>
 where
-    I: Input,
-    E: ParseError<I>,
+    I: Clone,
     P: Parser<I, E>,
 {
     move |input: I| {
@@ -51,8 +50,6 @@ where
 /// ```
 pub fn between<I, E, L, P, R>(mut open: L, mut parser: P, mut close: R) -> impl FnMut(I) -> ParseResult<P::Output, I, E>
 where
-    I: Input,
-    E: ParseError<I>,
     L: Parser<I, E>,
     P: Parser<I, E>,
     R: Parser<I, E>
@@ -80,7 +77,6 @@ where
 /// ```
 pub fn pair<I, E, L, S, R>(mut left: L, mut sep: S, mut right: R) ->  impl FnMut(I) -> ParseResult<(L::Output, R::Output), I, E>
 where 
-    I: Input,
     L: Parser<I, E>,
     S: Parser<I, E>,
     R: Parser<I, E>
@@ -212,8 +208,7 @@ where
 /// ```
 pub fn many<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
-    I: Input,
-    E: ParseError<I>,
+    I: Clone,
     P: Parser<I, E>,
 {
     move |mut input: I| {
@@ -242,7 +237,7 @@ where
 /// ```
 pub fn many1<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
-    I: Input,
+    I: Clone,
     P: Parser<I, E>
 {
     move |input: I| {
@@ -275,8 +270,7 @@ where
 /// ```
 pub fn many_till<P, F, I, E>(mut parser: P, mut f: F) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>  
 where
-    I: Input,
-    E: ParseError<I>,
+    I: Clone,
     P: Parser<I, E>,
     F: Parser<I, E>,
 {
@@ -308,7 +302,6 @@ where
 /// ```
 pub fn count<I, E, P>(mut parser: P, n: usize) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>  
 where 
-    I: Input,
     P: Parser<I, E>
 {
     move |mut input: I| {
@@ -338,7 +331,7 @@ where
 /// ```
 pub fn skip_many<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<(), I, E>  
 where 
-    I: Input,
+    I: Clone,
     P: Parser<I, E>
 {
     move |mut input: I| {
@@ -365,7 +358,7 @@ where
 /// ```
 pub fn skip_many1<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<(), I, E> 
 where 
-    I: Input,
+    I: Clone,
     P: Parser<I, E>
 {
     move |input: I| {
@@ -395,8 +388,7 @@ where
 /// ```
 pub fn skip_till<P, F, I, E>(mut parser: P, mut f: F) -> impl FnMut(I) -> ParseResult<(), I, E> 
 where
-    I: Input,
-    E: ParseError<I>,
+    I: Clone,
     P: Parser<I, E>,
     F: Parser<I, E>
 {
@@ -426,7 +418,6 @@ where
 /// ```
 pub fn skip<I, E, P>(mut parser: P, n: usize) -> impl FnMut(I) -> ParseResult<(), I, E> 
 where 
-    I: Input,
     P: Parser<I, E>
 {
     move |mut input: I| {
@@ -455,7 +446,7 @@ where
 /// ```
 pub fn sep_by<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
-    I: Input,
+    I: Clone,
     P: Parser<I, E>, 
     S: Parser<I, E>
 {
@@ -490,7 +481,7 @@ where
 /// ```
 pub fn sep_by1<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
-    I: Input,
+    I: Clone,
     P: Parser<I, E>, 
     S: Parser<I, E>
 {
@@ -523,7 +514,7 @@ where
 /// ```
 pub fn end_by<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E>
 where
-    I: Input,
+    I: Clone,
     P: Parser<I, E>, 
     S: Parser<I, E>
 {
@@ -562,7 +553,7 @@ where
 /// ```
 pub fn end_by1<I, E, P, S>(mut parser: P, mut sep: S) -> impl FnMut(I) -> ParseResult<Vec<P::Output>, I, E> 
 where
-    I: Input,
+    I: Clone,
     P: Parser<I, E>, 
     S: Parser<I, E>
 {
@@ -597,7 +588,7 @@ where
 /// ```
 pub fn peek<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E> 
 where
-    I: Input,
+    I: Clone,
     P: Parser<I, E>
 {
     move |input: I| {
@@ -649,7 +640,7 @@ where
 /// ```
 pub fn not<I, E, P>(mut parser: P) -> impl FnMut(I) -> ParseResult<(), I, E>
 where
-    I: Input,
+    I: Clone,
     E: ParseError<I>,
     P: Parser<I, E>,
 {
@@ -678,7 +669,7 @@ where
 /// ```
 pub fn cond<F, P, I, E>(mut f: F, mut parser: P) -> impl FnMut(I) -> ParseResult<Option<P::Output>, I, E> 
 where
-    I: Input,
+    I: Clone,
     F: Parser<I, E>,
     P: Parser<I, E>
 {
@@ -708,7 +699,6 @@ where
 /// ```
 pub fn preceded<I, E, A, B>(mut first: A, mut second: B) -> impl FnMut(I) -> ParseResult<B::Output, I, E> 
 where
-    I: Input,
     A: Parser<I, E>,
     B: Parser<I, E>
 {
@@ -733,7 +723,6 @@ where
 /// ```
 pub fn terminated<I, E, A, B>(mut first: A, mut second: B) -> impl FnMut(I) -> ParseResult<A::Output, I, E> 
 where
-    I: Input,
     A: Parser<I, E>,
     B: Parser<I, E>
 {
@@ -769,11 +758,7 @@ where
     }
 }
 
-pub fn empty<I, E>(input: I) ->  ParseResult<(), I, E>
-where
-    I: Input,
-    E: ParseError<I>
-{
+pub fn empty<I, E>(input: I) ->  ParseResult<(), I, E> {
     Ok(((), input))
 }
 
@@ -792,7 +777,6 @@ where
 /// ```
 pub fn error<I, E>(input: I) -> ParseResult<(), I, E> 
 where
-    I: Input,
     E: ParseError<I>
 {
     Err(ParseError::unexpect(input))
@@ -814,8 +798,6 @@ where
 /// ```
 pub fn pure<T, I, E>(t: T) -> impl FnMut(I) -> ParseResult<T, I, E> 
 where
-    I: Input,
-    E: ParseError<I>,
     T: Clone,
 {
     move|input: I| Ok((t.clone(), input))
@@ -823,8 +805,6 @@ where
 
 pub fn value<T, P, I, E>(v: T, mut parser: P) -> impl FnMut(I) -> ParseResult<T, I, E> 
 where
-    I: Input,
-    E: ParseError<I>,
     P: Parser<I, E>,
     T: Clone,
 {
@@ -836,7 +816,7 @@ where
 
 pub fn verify<P, F, I, E>(mut parser: P, f: F) -> impl FnMut (I) -> ParseResult<P::Output, I, E> 
 where
-    I: Input,
+    I: Clone,
     E: ParseError<I>,
     P: Parser<I, E>,
     F: Fn(&P::Output) -> bool
@@ -854,8 +834,6 @@ where
 
 pub fn alt<I, E, List>(mut list: List) -> impl FnMut(I) -> ParseResult<List::Output, I, E> 
 where 
-    I: Input,
-    E: ParseError<I>,
     List: Alt<I, E>
 {
     move |input: I| list.choice(input)
@@ -863,8 +841,6 @@ where
 
 pub fn seq<I, E, List>(mut list: List) -> impl FnMut(I) -> ParseResult<List::Output, I, E> 
 where 
-    I: Input,
-    E: ParseError<I>,
     List: Seq<I, E>
 {
     move |input: I| list.parse(input)

@@ -4,10 +4,11 @@ use rtor::{
     Parser, 
     Input,
     ParseResult,
+    ParseError,
+    AsChar,
     char::{
         one_of,
         ascii, 
-        unicode,
         anychar,
         char,
         string,
@@ -18,7 +19,6 @@ use rtor::{
         skip, 
         recognize, 
         terminated, 
-        preceded,
         value,
         pair, 
         sep_by,
@@ -26,7 +26,7 @@ use rtor::{
         alt,
         eof,
         opt,
-    }, ParseError, AsChar, 
+    },
 };
 
 fn main() {
@@ -54,7 +54,7 @@ enum JsonValue {
 
 fn parse_json(input: &str) -> ParseResult<JsonValue, &str> {
     between(
-        unicode::multi_space, 
+        ascii::multi_space, 
         json_value,
         eof
     )(input)
@@ -62,30 +62,23 @@ fn parse_json(input: &str) -> ParseResult<JsonValue, &str> {
 
 //https://www.json.org/json-en.html
 fn json_value(input: &str) -> ParseResult<JsonValue, &str> {
-    lexeme(alt((
+    alt((
         between(
             lexeme(char('{')), 
-            sep_by(
-                pair(
-                        lexeme(key), 
-                        lexeme(char(':')), 
-                        json_value), 
-                lexeme(char(','))),
+            sep_by(pair(key, lexeme(char(':')), json_value), lexeme(char(','))),
             lexeme(char('}'))
         ).map(|members| JsonValue::Object(HashMap::from_iter(members))),
         between(
             lexeme(char('[')),
-            sep_by(
-                    json_value, 
-                    lexeme(char(','))),
+            sep_by(json_value, lexeme(char(','))),
             lexeme(char(']'))
         ).map(JsonValue::Array),
         number.map(JsonValue::Number),
         key.map(JsonValue::String),
-        value(JsonValue::Boolean(true), string("true")),
-        value(JsonValue::Boolean(false), string("false")),
-        value(JsonValue::Null, string("null")),
-    )))(input)
+        value(JsonValue::Boolean(true), lexeme(string("true"))),
+        value(JsonValue::Boolean(false), lexeme(string("false"))),
+        value(JsonValue::Null, lexeme(string("null"))),
+    ))(input)
 }
 
 fn key(input: &str) -> ParseResult<String, &str> {
@@ -94,16 +87,15 @@ fn key(input: &str) -> ParseResult<String, &str> {
     between(
         char('"'), 
         recognize(skip_many(character)).map(|i: &str| i.to_owned()),
-        char('"')
+        lexeme(char('"'))
     )(input)
 }
 
 pub fn number(input: &str) -> ParseResult<f64, &str> {
     let exponent = (alt((char('e'), char('E'))), opt(alt((char('+'), char('-')))), ascii::multi_digit1);
     let fraction = (char('.'), ascii::multi_digit1);
-    recognize((opt(char('-')), ascii::multi_digit1, opt(fraction), opt(exponent)))
-        .map(|i: &str| i.parse().unwrap())
-        .parse(input)
+    lexeme(recognize((opt(char('-')), ascii::multi_digit1, opt(fraction), opt(exponent)))
+        .map(|i: &str| i.parse().unwrap()))(input)
 }
 
 pub fn lexeme<P, I, E>(parser: P) -> impl FnMut(I) -> ParseResult<P::Output, I, E> 
@@ -113,6 +105,6 @@ where
     E: ParseError<I>,
     P: Parser<I, E>,
 {
-    let mut parser = terminated(parser, unicode::multi_space);
+    let mut parser = terminated(parser, ascii::multi_space);
     move |input| parser(input)
 }
