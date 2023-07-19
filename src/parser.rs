@@ -1,7 +1,6 @@
 use std::marker::PhantomData;
 
 use crate::{
-    Input, 
     ParseError,
     ParseResult,
 };

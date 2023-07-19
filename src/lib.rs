@@ -11,9 +11,7 @@ pub use self::{
         ParseError
     },
     parser::Parser,
-    input::{
-        Input,
-    },
+    input::Input,
     state::{
         State,
         Pos
