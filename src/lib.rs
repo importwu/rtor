@@ -18,7 +18,7 @@ pub use self::{
     }
 };
 
-pub type ParseResult<O, I, E = SimpleError<<I as Input>::Token>> = Result<(O, I), E>;
+pub type ParseResult<O, I, E = SimpleError<I>> = Result<(O, I), E>;
 
 pub trait AsChar {
     fn as_char(&self) -> char;

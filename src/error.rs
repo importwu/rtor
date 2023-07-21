@@ -3,8 +3,6 @@ use std::{
     error,
 };
 
-use crate::Input;
-
 pub trait ParseError<I> {
     fn unexpect(input: I) -> Self;
     fn expect(message: String, input: I) -> Self;
@@ -14,28 +12,27 @@ pub trait ParseError<I> {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum SimpleError<T> {
-    Unexpected(Option<T>),
-    Expected(String)
+pub struct SimpleError<I> {
+    input: I,
+    message: Option<String>
 }
 
-impl<I: Input> ParseError<I> for SimpleError<I::Token> {
-    fn unexpect(mut input: I) -> Self {
-        Self::Unexpected(input.next())
+impl<I> ParseError<I> for SimpleError<I> {
+    fn unexpect(input: I) -> Self {
+        SimpleError { input, message: None }
     }
 
-    fn expect(message: String, _: I) -> Self {
-        Self::Expected(message)
+    fn expect(message: String, input: I) -> Self {
+        SimpleError { input, message: Some(message) }
     }
 }
 
-impl<T> fmt::Display for SimpleError<T> where T: fmt::Display {
+impl<I> fmt::Display for SimpleError<I> where I: fmt::Display {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-           Self::Unexpected(Some(token)) => write!(f, "unexpected {}", token),
-           Self::Unexpected(None) => write!(f, "end of input"),
-           Self::Expected(message) => write!(f, "{}", message)
-        }        
+       match self.message {
+           Some(ref msg) => write!(f, "expected {}, but found {}", msg, self.input),
+           None => write!(f, "unexpected {}", self.input)
+       }      
     }
 }
 
