@@ -13,8 +13,8 @@ pub trait ParseError<I> {
 
 #[derive(Debug, PartialEq)]
 pub struct SimpleError<I> {
-    input: I,
-    message: Option<String>
+    pub input: I,
+    pub message: Option<String>
 }
 
 impl<I> ParseError<I> for SimpleError<I> {
