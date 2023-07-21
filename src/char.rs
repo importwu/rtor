@@ -11,6 +11,19 @@ use crate::{
     }
 };
 
+/// Parse a single character.
+/// # Example
+/// ```
+/// use rtor::{Parser, ParseResult, SimpleError};
+/// use rtor::char::char;
+/// 
+/// fn parser(i: &str) -> ParseResult<char, &str> {
+///     char('a')(i)
+/// }
+/// 
+/// assert_eq!(parser("abc"), Ok((Some('a'), "bc")));
+/// assert_eq!(parser("bbc"), Err(SimpleError::Unexpected(Some('b')));
+/// ```
 pub fn char<I, E>(ch: char) -> impl FnMut(I) -> ParseResult<I::Token, I, E>
 where
     I: Input,
@@ -56,7 +69,7 @@ where
     }
 }
 
-pub fn sat<I, E, F>(mut pred: F) -> impl FnMut(I) -> ParseResult<I::Token, I, E> 
+pub fn sat<F, I, E>(mut pred: F) -> impl FnMut(I) -> ParseResult<I::Token, I, E> 
 where
     I: Input,
     I::Token: AsChar,
